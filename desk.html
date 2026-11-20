@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Console Signal Flow Trainer</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -87,6 +88,9 @@ button{font-family:var(--font)}
 .mixf .grow,.master .grow{flex:1}
 .master{width:150px;border-right:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--panel-2) 70%,var(--led-red) 8%)}
 .master .fader{accent-color:var(--led-red)}
+.master-pnl{background:color-mix(in srgb,var(--panel) 88%,var(--led-red) 8%)}
+.master-pnl .mfdr .fader-wrap{height:150px}
+.master-pnl .mfvals{flex-direction:column;gap:2px}
 .mfvals{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
 .mfvals b{color:var(--ink);font-weight:600}
 /* centre section laid out as on the AWS 900: left column osc/talkback/monitor, right column dynamics, masters, foldback, returns */
@@ -289,6 +293,8 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .taskst{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--led-off);border:1px solid var(--line);white-space:nowrap}
 .taskst.ok{background:var(--led-green);color:#fff;border-color:transparent} .taskst.bad{background:var(--led-red);color:#fff;border-color:transparent}
 .taskbad{color:var(--led-red);font-weight:600}
+.taskok{background:var(--led-green);color:#fff;font-weight:700;padding:8px 12px;border-radius:8px}
+.taskbar.done{border-color:var(--led-green)}
 .exambar{display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-weight:600}
 .exambar .b{flex:0 0 auto;padding:4px 10px}
 .extot{font-family:var(--mono);font-size:14px;font-weight:600;margin:8px 0}
@@ -887,6 +893,7 @@ function centreHTML(){
         <div class="kb">${RK({path:'c.monLvl',label:'MONITOR LEVEL',min:0,max:10,tip:'monLvl',fmt:'lvdb',aria:'Monitor level',color:'#2f6fa3'})}<div class="col">${c('dim',1,'DIM','yellow')}${c('mcut',1,'CUT','red')}${c('mono',1,'MONO')}</div></div>
         <div class="row"><span class="sub-l">SOLO</span>${c('soloMode','pfl','PFL','yellow')}${c('soloMode','afl','AFL','yellow')}</div>
         <div class="row">${btn('data-mflip="1" data-tip="mflip"','MASTER FLIP','blue')}</div></div>
+      ${masterHTML()}
     </div>
     <div class="ccol wide">
       <div class="crow">
@@ -903,22 +910,22 @@ function centreHTML(){
     </div>
   </div>`;
 }
-// one master fader that controls the REC or MIX bus, picked in REC/MIX bus functions (as on the AWS)
+// REC/MIX bus functions and the one master fader, at the bottom of the centre section next to the monitor (as on the AWS)
 function masterHTML(){
-  return `<div class="strip master">
-    <div class="strip-head"><div class="num">REC / MIX</div><div class="note" style="font-size:11px">bus functions</div></div>
-    <div class="sec"><div class="sec-l">Fader controls</div>
-      <div class="row">${btn('data-c="mfSel" data-v="rec" data-tip="mfSel"','REC','red')}${btn('data-c="mfSel" data-v="mix" data-tip="mfSel"','MIX','green')}</div>
-      <div class="sec-l">Bus inserts</div><div class="row">${btn('data-c="recIns" data-v="1" data-tip="recIns"','REC INS','green')}${btn('data-c="mixIns" data-v="1" data-tip="mixIns"','MIX INS','green')}</div>
-      <div class="mfvals"><span>REC <b id="mfv-rec"></b></span><span>MIX <b id="mfv-mix"></b></span></div></div>
-    <div class="grow"></div>
-    <div class="sec"><div class="mfdr"><span class="fl" id="mfl">REC</span>
-      <div class="fader-wrap" data-tip="master" id="mfw" data-label="Master fader">
-        <div class="meter"><i id="mfL"></i></div><div class="meter"><i id="mfR"></i></div>
-        <input class="fader" type="range" id="mf" min="0" max="100" step="1" data-path="c.recMaster" aria-label="Master fader">
-      </div><div class="fader-db" id="mfdb" style="width:auto"></div></div></div></div>`;
+  return `<div class="pnl master-pnl"><div class="pnl-t">REC / MIX BUS · MASTER FADER</div>
+    <div class="kb"><div class="col">
+        <span class="sub-l" style="width:auto">FADER CONTROLS</span>
+        <div class="row">${btn('data-c="mfSel" data-v="rec" data-tip="mfSel"','REC','red')}${btn('data-c="mfSel" data-v="mix" data-tip="mfSel"','MIX','green')}</div>
+        <span class="sub-l" style="width:auto">BUS INSERTS</span>
+        ${btn('data-c="recIns" data-v="1" data-tip="recIns"','REC INS','green')}${btn('data-c="mixIns" data-v="1" data-tip="mixIns"','MIX INS','green')}
+        <div class="mfvals"><span>REC <b id="mfv-rec"></b></span><span>MIX <b id="mfv-mix"></b></span></div></div>
+      <div class="mfdr"><span class="fl" id="mfl">REC</span>
+        <div class="fader-wrap" data-tip="master" id="mfw" data-label="Master fader">
+          <div class="meter"><i id="mfL"></i></div><div class="meter"><i id="mfR"></i></div>
+          <input class="fader" type="range" id="mf" min="0" max="100" step="1" data-path="c.recMaster" aria-label="Master fader">
+        </div><div class="fader-db" id="mfdb" style="width:auto"></div></div></div></div>`;
 }
-con.innerHTML=CHS.map(stripHTML).join('')+centreHTML()+masterHTML();
+con.innerHTML=CHS.map(stripHTML).join('')+centreHTML();
 
 // EQ panel
 const band=(t,color,inner)=>`<div class="band" style="--bc:${color}"><div class="band-t">${t}</div>${inner}</div>`;
@@ -1860,13 +1867,15 @@ function drawTask(R){
   const T=TASKS[TASK]; if(!T) return; taskTrack(R);
   const ok=!!T.ok(R), bad=T.bad?T.bad(R):'';
   $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':bad?'Fix this first':'In progress';
-  $('taskbad').textContent=bad; $('taskbad').hidden=!bad;
+  $('taskbad').textContent=bad; $('taskbad').hidden=!bad; $('taskok').hidden=!ok;
+  if(!EMBED) $('taskok').textContent='✓ Task done. Go back to your lesson for the next task, or keep exploring.';
+  document.querySelector('.taskbar').classList.toggle('done',ok);
   if(ok&&!TK.done){ TK.done=true; tell({type:'task',task:TASK,done:true}); }
 }
 if(TASK&&TASKS[TASK]){
   const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); TK.done=false;
   const bar=document.createElement('section'); bar.className='taskbar'; bar.setAttribute('aria-label','Task');
-  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><p class="taskbad" id="taskbad" hidden></p><details><summary>Hint</summary>${T.h}</details>`;
+  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden>✓ Task done: it is ticked off in your lesson. Close the desk and go on to the next task, or keep exploring.</p><details><summary>Hint</summary>${T.h}</details>`;
   document.querySelector('.tabs').before(bar);
   const _render=render; render=function(){ _render(); drawTask(LAST); };
 }

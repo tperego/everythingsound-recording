@@ -1,10 +1,10 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200113';
-import { findLesson } from './lessons.js?v=202611200113';
-import { h, store, toast } from './util.js?v=202611200113';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200113';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200125';
+import { findLesson } from './lessons.js?v=202611200125';
+import { h, store, toast } from './util.js?v=202611200125';
+import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200125';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -140,7 +140,7 @@ async function gate() {
   $('#exercises').replaceChildren();
   if (!p) {
     $('#gate').replaceChildren(h('section', { class: 'card gate' }, h('h2', {}, 'Sign in to do this lesson'),
-      h('p', { class: 'muted' }, 'The video is open to everyone. The tasks on the desk and the exam are for students in the course: sign in, or create your account with the class code from your teacher.'),
+      h('p', { class: 'muted' }, 'The video is open to everyone. The tasks on the desk and the exam are for students in the course. Each Academy site remembers your sign-in separately, so sign in here once with the same email and password you use for Music Theory. New? Create your account with the class code from your teacher.'),
       h('a', { class: 'btn primary', href: `account.html?next=${encodeURIComponent(location.pathname.split('/').pop() + location.search)}` }, 'Sign in or create an account')));
     return;
   }
