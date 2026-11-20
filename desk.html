@@ -1,0 +1,1878 @@
+<title>Console Signal Flow Trainer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* Tabs: Console (8 strips, centre, master), Patchbay, DAW (8 tracks), Reverb and Compressor (outboard units). */
+:root{
+  --bg:#e9ebee; --panel:#d7dbe1; --panel-2:#c8cdd5; --ink:#1d232c; --muted:#5a6472; --line:#a9b1bc;
+  --sig:#d98a1c; --sig-soft:#f3d6a6; --dead:#b5bcc6;
+  --led-amber:#f0a531; --led-red:#d9483b; --led-green:#3fa45b; --led-yellow:#e8c832; --led-blue:#3f7fd1; --led-off:#eef0f3;
+  --card:#f6f7f9; --ok:#2f8a4c; --bay:#2a2f37; --bay-ink:#e8ebef; --bay-muted:#9aa3ae; --jack:#111418;
+  --k-hf:#c8372d; --k-hmf:#2f8f4e; --k-lmf:#2f6fc0; --k-lf:#3a3f47; --k-hpf:#8a8f98; --k-lvl:#8a6d3b; --k-ptr:#ffffff;
+  --font:"IBM Plex Sans Condensed",system-ui,"Arial Narrow",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14181e; --panel:#1f252e; --panel-2:#29303a; --ink:#e6e9ee; --muted:#97a1ae; --line:#3c4552;
+  --sig:#f2a640; --sig-soft:#5a4120; --dead:#46505d; --led-off:#323a45; --card:#1a1f27; --ok:#5cc47c; --bay:#0f1216; --k-lf:#7d8794; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181e; --panel:#1f252e; --panel-2:#29303a; --ink:#e6e9ee; --muted:#97a1ae; --line:#3c4552;
+  --sig:#f2a640; --sig-soft:#5a4120; --dead:#46505d; --led-off:#323a45; --card:#1a1f27; --ok:#5cc47c; --bay:#0f1216; --k-lf:#7d8794; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1480px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font-size:26px;font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+.lede{color:var(--muted);margin:2px 0 0;max-width:80ch}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;margin:0;color:var(--muted);font-weight:600}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+button{font-family:var(--font)}
+.tool{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:500}
+.tool:hover{border-color:var(--muted)}
+:focus-visible{outline:2px solid var(--led-blue);outline-offset:2px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{border:1px solid transparent;border-bottom:none;background:none;color:var(--muted);padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;margin-bottom:-1px;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--bg);color:var(--ink);border-color:var(--line);border-bottom:1px solid var(--bg)}
+.view{display:flex;flex-direction:column;gap:16px}
+.tip{background:var(--panel-2);border-radius:8px;padding:8px 12px;min-height:40px;display:flex;gap:10px;align-items:center}
+.tip b{font-family:var(--mono);font-size:12px;color:var(--sig);white-space:nowrap}
+.audiobar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.play{font-weight:600;min-width:130px}
+.play.on{background:var(--led-green);color:#fff;border-color:transparent}
+.listen{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.listen .sec-l{margin-right:4px}
+.listen .b{flex:0 0 auto;padding:5px 10px}
+.vol{width:160px}
+.mmeter{width:120px;height:8px;background:var(--led-off);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+.mmeter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--led-green) 60%,var(--led-yellow) 85%,var(--led-red))}
+.loopwarn{background:var(--led-red);color:#fff;border-radius:8px;padding:8px 12px;font-weight:600}
+
+/* console */
+.console-scroll{overflow-x:auto;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.console{display:flex;min-width:max-content;align-items:stretch}
+.strip{width:128px;padding:10px 7px 12px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px;cursor:pointer;position:relative}
+.strip.sel{background:var(--panel-2)}
+.strip.sel::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--sig)}
+.strip-head{text-align:center}
+.strip-head .num{font-family:var(--mono);font-weight:600;font-size:15px}
+.srcsel{display:flex;flex-direction:column;gap:1px;text-align:left;margin-top:4px}
+.srcsel span{font-size:9.5px;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.srcsel select{width:100%;font-family:var(--font);font-size:11.5px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:2px 3px}
+.sec{border-top:1px solid var(--line);padding-top:6px;display:flex;flex-direction:column;gap:4px}
+.sec-l{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.sub-l{font-size:9.5px;letter-spacing:.06em;color:var(--muted);font-weight:600;width:34px;flex:0 0 34px;align-self:center}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.b{flex:1 1 0;min-width:0;overflow:hidden;border:1px solid var(--line);background:var(--led-off);color:var(--ink);font-size:11px;font-weight:600;
+  padding:4px 2px;border-radius:4px;cursor:pointer;letter-spacing:.02em;white-space:nowrap}
+.b.on{color:#1d1a12;border-color:transparent}
+.b.on.amber{background:var(--led-amber)} .b.on.red{background:var(--led-red);color:#fff} .b.on.green{background:var(--led-green);color:#fff}
+.b.on.yellow{background:var(--led-yellow)} .b.on.blue{background:var(--led-blue);color:#fff}
+.b.sq{flex:0 0 calc(25% - 3px);font-family:var(--mono)}
+.knob{display:flex;align-items:center;gap:6px;font-size:11px}
+.knob label{width:32px;color:var(--muted);font-weight:600}
+.knob input{flex:1;min-width:0;accent-color:var(--sig)}
+.knob output{font-family:var(--mono);width:22px;text-align:right;font-size:11px}
+.lvl{font-family:var(--mono);font-size:11px;text-align:center;border-radius:4px;padding:2px;background:var(--led-off);white-space:pre}
+.lvl.ok{background:var(--led-green);color:#fff} .lvl.lo{background:var(--led-yellow);color:#1d1a12} .lvl.clip{background:var(--led-red);color:#fff}
+.warn{font-size:11px;color:var(--led-red);font-weight:600;line-height:1.25;min-height:28px}
+.fader-wrap{display:flex;align-items:center;justify-content:center;gap:6px;height:150px;padding-top:4px}
+.fader{writing-mode:vertical-lr;direction:rtl;height:140px;width:28px;accent-color:var(--sig)}
+.fader-db{font-family:var(--mono);font-size:12px;width:44px;text-align:center;font-variant-numeric:tabular-nums}
+.meter{width:8px;height:140px;border-radius:3px;background:var(--led-off);position:relative;overflow:hidden;border:1px solid var(--line)}
+.meter i{position:absolute;inset:auto 0 0;height:0;background:linear-gradient(to top,var(--led-green) 60%,var(--led-yellow) 85%,var(--led-red))}
+.mixf{width:100px;background:color-mix(in srgb,var(--panel) 75%,var(--sig-soft))}
+.mixf .grow,.master .grow{flex:1}
+.master{width:150px;border-right:none;border-left:1px solid var(--line);background:color-mix(in srgb,var(--panel-2) 70%,var(--led-red) 8%)}
+.master .fader{accent-color:var(--led-red)}
+.mfvals{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.mfvals b{color:var(--ink);font-weight:600}
+/* centre section laid out as on the AWS 900: left column osc/talkback/monitor, right column dynamics, masters, foldback, returns */
+.centre{display:flex;gap:10px;padding:10px;background:var(--panel-2);border-left:1px solid var(--line)}
+.ccol{display:flex;flex-direction:column;gap:8px;width:210px}
+.ccol.wide{width:auto}
+.crow{display:flex;gap:8px;align-items:stretch}
+.pnl{display:flex;flex-direction:column;gap:5px;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.pnl-t{font-size:10.5px;font-weight:700;letter-spacing:.08em;white-space:nowrap}
+.kb{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.col{display:flex;flex-direction:column;gap:4px;min-width:58px}
+.col .b,.kb>.b{flex:none}
+.mgrid{display:grid;gap:5px}
+.mgrid.two{grid-template-columns:repeat(2,1fr)} .mgrid.one{grid-template-columns:1fr 1fr}
+.mcell{display:flex;flex-direction:column;align-items:center;gap:3px;padding:3px;border:1px solid var(--line);border-radius:6px}
+.mcell .b{width:100%;flex:none}
+.fbk{width:118px}
+.ret{width:96px;align-items:center}
+.ret .b{font-size:10px;padding:3px 0}
+.dynu{width:130px}
+.dyn-ch{display:block;font-weight:600;color:var(--sig);font-size:10px;letter-spacing:0}
+.gate-note{font-size:9.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:4px;text-align:center}
+.grleds{display:flex;flex-direction:column;gap:2px;font-family:var(--mono);font-size:9px}
+.grleds span{display:flex;align-items:center;gap:4px}
+.grleds i{width:9px;height:9px;border-radius:50%;background:var(--led-off);border:1px solid var(--line)}
+.grleds span:nth-child(-n+2).on i{background:var(--led-red)} .grleds span:nth-child(n+3).on i{background:var(--led-yellow)}
+/* channel strip, AWS order */
+.aws-meter{align-items:center}
+.meter.top{height:70px;width:12px}
+.knob.red input{accent-color:#c8352b} .knob.grey input{accent-color:#9aa0a6} .knob.green input{accent-color:#2f8a4e} .knob.blue input{accent-color:#2f6fa3}
+
+/* rotary knobs */
+.rkw{display:flex;flex-direction:column;align-items:center;gap:0;min-width:0}
+.rk{width:40px;height:40px;cursor:ns-resize;touch-action:none;border-radius:50%}
+.rk.sm{width:34px;height:34px}
+.rk.lg{width:52px;height:52px}
+.rk svg{width:100%;height:100%;display:block}
+.rk-track{fill:none;stroke:var(--line);stroke-width:3;stroke-linecap:round}
+.rk-arc{fill:none;stroke:var(--kc);stroke-width:3;stroke-linecap:round}
+.rk-body{fill:var(--kc)}
+.rk-ptr{stroke:var(--k-ptr);stroke-width:2.5;stroke-linecap:round}
+.rk-l{font-size:9.5px;font-weight:600;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.rk-v{font-family:var(--mono);font-size:10.5px;white-space:nowrap}
+
+/* EQ panel */
+.eq-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+@media (max-width:1000px){.eq-grid{grid-template-columns:minmax(0,1fr)}}
+.eq-bands{display:flex;gap:8px;flex-wrap:wrap}
+.band{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);width:78px}
+.band-t{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--bc)}
+.band .b{width:100%;flex:none}
+svg.eqc{width:100%;height:auto;display:block;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.eqc .grid{stroke:var(--line);stroke-width:1}
+.eqc .zero{stroke:var(--muted);stroke-width:1}
+.eqc .curve{fill:none;stroke:var(--sig);stroke-width:2.5}
+.eqc .area{fill:var(--sig-soft);opacity:.6}
+.eqc text{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.eqhead{display:flex;gap:6px;align-items:center}
+.eqhead .b{flex:0 0 auto;padding:5px 10px}
+
+/* schematic */
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid var(--sig);vertical-align:middle;margin-right:5px}
+.legend i.d{border-top:3px solid var(--dead)} .legend i.x{border-top:2px dashed var(--dead)}
+.svg-scroll{overflow-x:auto}
+svg.schem{display:block;width:100%;min-width:900px;height:auto}
+svg text{font-family:var(--font);fill:var(--ink)}
+.w-live{stroke:var(--sig);stroke-width:3;fill:none;stroke-dasharray:8 6;animation:flow .9s linear infinite}
+.w-dead{stroke:var(--dead);stroke-width:2;fill:none}
+.w-off{stroke:var(--dead);stroke-width:1.5;fill:none;stroke-dasharray:3 4}
+@keyframes flow{to{stroke-dashoffset:-14}}
+@media (prefers-reduced-motion:reduce){.w-live{animation:none;stroke-dasharray:none}}
+.blk{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+.blk.live{stroke:var(--sig);stroke-width:2.5;fill:var(--sig-soft)}
+.blk.byp{stroke-dasharray:5 4;fill:var(--card)}
+.blk.stop{stroke:var(--led-red);stroke-width:2.5}
+.t-main{font-size:13px;font-weight:700}
+.t-sub{font-size:10.5px;fill:var(--muted)}
+.t-rail{font-size:10px;font-weight:600;letter-spacing:.08em;fill:var(--muted)}
+.dot{fill:var(--sig)} .dot.dead{fill:var(--dead)}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.outs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.out{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:5px;background:var(--bg)}
+.out.has{border-color:var(--sig)}
+.out-t{display:flex;justify-content:space-between;gap:6px;font-weight:600;font-size:13px}
+.out-t small{font-weight:400;color:var(--muted);font-size:11px;text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-height:20px}
+.chip{font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;background:var(--panel-2);color:var(--ink);border-left:4px solid var(--c,var(--sig))}
+.chip.fx{font-style:italic}
+.empty{font-size:11px;color:var(--muted)}
+.ex{display:flex;flex-direction:column;gap:8px}
+.task{border:1px solid var(--line);border-radius:8px;padding:9px 11px;display:grid;grid-template-columns:22px 1fr;gap:4px 8px;background:var(--bg)}
+.task .st{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;color:transparent;margin-top:1px}
+.task.done{border-color:var(--ok)}
+.task.done .st{background:var(--ok);border-color:var(--ok);color:#fff}
+.task h3{margin:0;font-size:14px;font-weight:600}
+.task p{margin:0;color:var(--muted);font-size:12.5px;grid-column:2}
+.task details{grid-column:2;font-size:12.5px}
+.task summary{cursor:pointer;color:var(--led-blue);font-weight:500}
+.progress{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);max-width:95ch}
+
+/* patchbay */
+.bay-scroll{overflow-x:auto;border-radius:10px}
+.bay{position:relative;background:var(--bay);color:var(--bay-ink);border-radius:10px;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px;min-width:max-content}
+.bay-row{display:flex;gap:18px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,.04)}
+.grp{display:flex;flex-direction:column;gap:3px}
+.grp-l{font-size:10px;letter-spacing:.1em;font-weight:600;color:var(--bay-muted);text-transform:uppercase;white-space:nowrap;height:14px}
+.jacks{display:flex;gap:6px}
+.col{display:flex;flex-direction:column;align-items:center;gap:2px;width:46px}
+.jack{width:46px;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--bay-ink);cursor:pointer;padding:2px 0;border-radius:6px}
+.jack .h{width:20px;height:20px;border-radius:50%;background:var(--jack);border:3px solid #6b7480;box-shadow:inset 0 2px 3px rgba(0,0,0,.7)}
+.jack .n{font-family:var(--mono);font-size:10px;line-height:1.1;text-align:center;white-space:nowrap}
+.jack:hover .h{border-color:var(--sig)}
+.jack.pending .h{border-color:var(--sig);box-shadow:0 0 0 4px rgba(242,166,64,.45)}
+.jack.live .h{border-color:var(--led-green)}
+.jack.blank{visibility:hidden;cursor:default}
+.norm{height:14px;width:2px;background:var(--bay-muted);opacity:.8}
+.norm.full{width:4px;background:repeating-linear-gradient(var(--bay-muted) 0 2px,transparent 2px 4px)}
+.norm.broken{background:var(--led-red);opacity:1;height:6px}
+.norm.none{opacity:0}
+.cables{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.cables path{fill:none;stroke-width:5;stroke-linecap:round;opacity:.92}
+.bay-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.bay-side{grid-template-columns:minmax(0,1fr)}}
+.plist{display:flex;flex-direction:column;gap:6px}
+.pitem{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--bg);font-size:13px}
+.pitem i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.pitem button{border:none;background:none;color:var(--led-red);cursor:pointer;font-weight:600}
+.keyrow{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.keyrow span{display:flex;align-items:center;gap:6px}
+.keyrow b{display:inline-block;width:3px;height:12px;background:var(--muted)}
+.keyrow b.f{width:4px;background:repeating-linear-gradient(var(--muted) 0 2px,transparent 2px 4px)}
+.keyrow b.x{background:var(--led-red);height:6px}
+
+/* DAW */
+.daw{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.transport{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tp{border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;font-size:13px;padding:6px 14px;border-radius:6px;cursor:pointer;letter-spacing:.04em}
+.tp.on[data-dt="play"]{background:var(--led-green);color:#fff;border-color:transparent}
+.tp.on[data-dt="rec"]{background:var(--led-red);color:#fff;border-color:transparent}
+.clock{font-family:var(--mono);font-size:16px;background:#0f1216;color:#8fe3a0;padding:5px 12px;border-radius:6px;letter-spacing:.04em;white-space:nowrap}
+.dawstat{font-size:12.5px;color:var(--muted);flex:1 1 220px;min-width:0}
+.dawstat.rec{color:var(--led-red);font-weight:600}
+.daw-scroll{overflow-x:auto}
+.trk{display:grid;grid-template-columns:160px 140px 116px 158px 158px minmax(360px,1fr);gap:10px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--line);min-width:1210px}
+.trk.head{padding-block:4px;font-size:10px;letter-spacing:.1em;color:var(--muted);font-weight:600;text-transform:uppercase}
+.tname{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tname b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tname b span{font-family:var(--mono);color:var(--muted);margin-right:6px}
+.tin{font-size:10.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm{height:6px;background:var(--led-off);border-radius:3px;overflow:hidden;border:1px solid var(--line)}
+.hm i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--led-green) 60%,var(--led-yellow) 85%,var(--led-red))}
+.tvol{display:flex;align-items:center;gap:6px}
+.tvol input{flex:1;min-width:0;accent-color:var(--sig)}
+.tvol output{font-family:var(--mono);font-size:11px;width:38px;text-align:right}
+.trk select{width:100%;font-family:var(--font);font-size:12px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:3px}
+.lane{position:relative;height:48px;background:var(--bg);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.lane.arm{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--led-red) 55%,transparent)}
+.lane.rec{background:color-mix(in srgb,var(--led-red) 14%,var(--bg))}
+.lane.dim .rgn{opacity:.4}
+.rgn{position:absolute;inset:3px 2px}
+.region{position:absolute;inset:0;border-radius:3px;background:color-mix(in srgb,var(--c) 22%,var(--bg));border:1px solid var(--c);overflow:hidden}
+.region svg{position:absolute;inset:0;width:100%;height:100%}
+.region path{fill:var(--c);opacity:.75}
+.region span{position:absolute;left:6px;top:2px;font-size:10.5px;font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--bg) 70%,transparent);padding:0 4px;border-radius:3px}
+.ph{position:absolute;top:0;bottom:0;width:2px;left:0;background:var(--led-red);pointer-events:none}
+.ruler{position:relative;height:16px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.ruler span{position:absolute;top:0;border-left:1px solid var(--line);padding-left:3px;height:16px}
+.trk .row .b{padding:5px 2px}
+
+.room{background:color-mix(in srgb,var(--panel) 60%,#b08a5a 18%);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:14px}
+.wallbox{background:var(--bay);color:var(--bay-ink);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;gap:6px;overflow-x:auto}
+.wb-t{font-size:10px;letter-spacing:.12em;color:var(--bay-muted);font-weight:600}
+.wb-s{display:flex;gap:10px}
+.sock{background:none;border:none;color:inherit;cursor:pointer;padding:2px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px;font-family:var(--mono);font-size:10px}
+.sock .h{width:22px;height:22px;border-radius:50%;background:var(--jack);border:3px solid #6b7480;box-shadow:inset 0 2px 3px rgba(0,0,0,.7)}
+.sock.on .h{border-color:var(--led-green)}
+.stations{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.stn{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--c,var(--line));border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
+.stn.off{opacity:.6;border-left-style:dashed}
+.stn .b{flex:none;padding:5px 4px}
+.stn-h{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.stn-h b{font-size:15px}
+.stn-h span{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.stn label{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:6px;font-size:10.5px;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.stn select{font-family:var(--font);font-size:12.5px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:3px}
+.badges{display:flex;flex-wrap:wrap;gap:4px}
+.bdg{font-size:11px;font-weight:600;padding:1px 7px;border-radius:10px;background:var(--panel-2)}
+.bdg.warn{background:var(--led-red);color:#fff} .bdg.ok{background:var(--led-green);color:#fff}
+.hpamp{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;margin-bottom:10px;background:var(--panel)}
+.hpamp .b{flex:0 0 auto;padding:5px 10px}
+.taskbar{border:2px solid var(--sig);border-radius:10px;padding:10px 14px;margin-bottom:12px;background:var(--panel);display:flex;flex-direction:column;gap:6px}
+.taskbar p{margin:0;max-width:95ch}
+.task-h{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:15px}
+.taskst{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--led-off);border:1px solid var(--line);white-space:nowrap}
+.taskst.ok{background:var(--led-green);color:#fff;border-color:transparent} .taskst.bad{background:var(--led-red);color:#fff;border-color:transparent}
+.taskbad{color:var(--led-red);font-weight:600}
+.exambar{display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-weight:600}
+.exambar .b{flex:0 0 auto;padding:4px 10px}
+.extot{font-family:var(--mono);font-size:14px;font-weight:600;margin:8px 0}
+.extab{display:flex;flex-direction:column;gap:10px}
+.exq{border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.exq h3{margin:0;padding:8px 10px;font-size:13px;background:var(--panel-2);display:flex;justify-content:space-between;gap:10px}
+.exr{display:grid;grid-template-columns:minmax(0,190px) 64px minmax(0,1fr);gap:10px;padding:6px 10px;border-top:1px solid var(--line);align-items:center;font-size:12.5px}
+.exr .why{color:var(--muted);min-width:0}
+.sc{font-family:var(--mono);font-weight:700;text-align:center;border-radius:5px;padding:3px 0;background:var(--led-off);border:1px solid var(--line);font-size:12px}
+.sc.s1{background:var(--led-green);color:#fff;border-color:transparent} .sc.s05{background:var(--led-yellow);color:#1d1a12;border-color:transparent} .sc.s0{background:var(--led-red);color:#fff;border-color:transparent}
+button.sc{cursor:pointer;width:100%}
+.phones{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+/* meter bridge */
+.vu svg{width:124px;height:72px;display:block}
+.vu-face{fill:#efe3bd}.vu-ink{stroke:#2b2418;fill:none}.vu-red{stroke:#c0392b;fill:none}
+.vu-txt{fill:#2b2418;font:600 7px var(--mono)}.vu-txt.r{fill:#c0392b}.vu-n{stroke:#1a1410;stroke-width:1.3}
+.vus{display:flex;gap:6px}
+.sgr{height:5px;margin:-3px 0 2px}.hm.gr i{background:#e8a33a;margin-left:auto}
+.mfdrs{display:flex;gap:10px;justify-content:center}
+.mfdr{display:flex;flex-direction:column;align-items:center;gap:4px}
+.mfdr .fl{font-size:11px;font-weight:700;letter-spacing:.1em}
+.mfdr .fader-wrap{gap:3px}
+.bcgr svg{width:150px;height:86px;display:block;margin:0 auto}
+.bridge{display:flex;gap:18px;align-items:flex-end;padding:10px 14px;background:#15181d;border-radius:10px;overflow-x:auto;color:#cfd5dc}
+.bg{display:flex;flex-direction:column;gap:5px}
+.bg-t{font-size:9.5px;letter-spacing:.12em;color:#9aa3ae;font-weight:600;white-space:nowrap}
+.bms{display:flex;gap:4px}
+.bm{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--mono);font-size:9.5px}
+.bm .meter{height:84px;width:10px;background:#0b0d10;border-color:#000}
+.bscale{display:flex;flex-direction:column;justify-content:space-between;height:84px;font-family:var(--mono);font-size:8.5px;color:#7d8794;margin-bottom:15px;text-align:right}
+/* outboard rack */
+.rack{background:#16191e;border-radius:10px;padding:16px;overflow-x:auto}
+.unit{min-width:860px;border-radius:6px;padding:16px 46px;position:relative;color:#e8ebef;display:flex;gap:24px;align-items:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 0 #000;--k-ptr:#fff}
+.unit::before,.unit::after{content:"";position:absolute;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:radial-gradient(#9aa3ae,#4b525c);box-shadow:inset 0 0 0 3px rgba(0,0,0,.25)}
+.unit::before{left:14px} .unit::after{right:14px}
+.unit.rev{background:linear-gradient(#2a3f5f,#1d2c45)}
+.unit.cmp{background:linear-gradient(#3b3a37,#262522)}
+.u-brand{display:flex;flex-direction:column;gap:2px;min-width:150px}
+.u-brand b{font-size:20px;letter-spacing:.12em}
+.u-brand small{font-size:11px;color:#aab3bd;letter-spacing:.06em}
+.u-knobs{display:flex;gap:16px;flex-wrap:nowrap}
+.unit .rk-l{color:#aab3bd} .unit .rk-v{color:#e8ebef}
+.unit .rk-track{stroke:rgba(255,255,255,.22)}
+.u-side{display:flex;flex-direction:column;gap:8px;margin-left:auto;min-width:150px}
+.u-m{display:grid;grid-template-columns:30px 1fr;gap:6px;align-items:center;font-size:10px;letter-spacing:.08em;color:#aab3bd;font-weight:600}
+.u-m .hm{background:#0d0f12;border-color:#000;height:8px}
+.u-m .hm.gr i{background:#e8a33a;margin-left:auto}
+.unit .b{background:#1a1c20;color:#e8ebef;border-color:#000;padding:5px 8px}
+.unit .b.on.red{background:var(--led-red)}
+.conn{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:800px){.conn{grid-template-columns:minmax(0,1fr)}}
+.conn .out{gap:8px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Console Signal Flow Trainer</h1>
+      <p class="lede">An SSL AWS 900 laid out like the real desk: eight channel strips in the desk's top‑to‑bottom order, a centre section with the oscillator, talkback, monitor, bus compressor, Dynamics 1 and 2, track bus and cue/FX masters, foldbacks and stereo returns, and one master fader for the REC or MIX bus. Plus a normalled patchbay, an eight‑track DAW, an outboard reverb and two outboard compressors. Press buttons, turn knobs, patch cables; the schematic, the outputs and the audio follow.</p>
+    </div>
+    <div class="btnrow"><button class="tool" id="reset">Reset everything</button></div>
+  </header>
+
+  <div class="audiobar">
+    <button class="tool play" id="play">▶ Start audio</button>
+    <div class="listen" role="group" aria-label="Listen point"><span class="sec-l">Listen to</span>
+      <button class="b amber on" data-listen="spk">Speakers</button><button class="b amber" data-listen="pha">Headphones A</button><button class="b amber" data-listen="phb">Headphones B</button><button class="b amber" data-listen="print">Print recorder</button></div>
+    <div class="knob vol"><label for="vol">VOL</label><input type="range" id="vol" min="0" max="10" value="6"></div>
+    <div class="mmeter" title="Output level"><i id="mm"></i></div>
+    <span class="note">The band (drums, bass, synth, vocal) plays live into the mic lines at 96 BPM. Start at a low volume.</span>
+  </div>
+  <div class="loopwarn" id="loopwarn" hidden>Feedback loop: a signal is patched back into its own path. Remove the last patch.</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-room" aria-selected="false" data-view="room">Live room</button>
+    <button class="tab" role="tab" id="tab-console" aria-selected="true" data-view="console">Console</button>
+    <button class="tab" role="tab" id="tab-patchbay" aria-selected="false" data-view="patchbay">Patchbay</button>
+    <button class="tab" role="tab" id="tab-daw" aria-selected="false" data-view="daw">DAW</button>
+    <button class="tab" role="tab" id="tab-reverb" aria-selected="false" data-view="reverb">Reverb</button>
+    <button class="tab" role="tab" id="tab-compressor" aria-selected="false" data-view="compressor">Compressors</button>
+    <button class="tab" role="tab" id="tab-exam" aria-selected="false" data-view="exam">Exam</button>
+  </div>
+
+  <div class="exambar" id="exambar" hidden></div>
+
+  <div class="tip" id="tip" aria-live="polite"><b>TIP</b><span>Hover over or focus any control or jack to see what it does. Drag knobs up or down, or use the arrow keys.</span></div>
+
+  <section class="view" id="view-room" hidden>
+    <div class="room">
+      <div class="wallbox"><div class="wb-t">WALL BOX · MIC LINES TO CONTROL ROOM</div><div class="wb-s" id="wbs"></div></div>
+      <div class="stations" id="stations"></div>
+      <div class="hpamp" id="hpamp" aria-label="Headphone amp"></div>
+      <div class="phones" id="phones"></div>
+    </div>
+    <p class="note">Choose what is set up in the live room and how it is picked up. Each station plugs into the wall‑box socket with the same number (click the socket or the PLUGGED button to pull the cable out and free that line), which becomes mic line 1–8 on the patchbay. On the console, each channel's SOURCE menu picks which mic line it hears. Condenser mics need 48V on the channel; DI boxes and dynamic mics do not.</p>
+  </section>
+
+  <section class="view" id="view-console">
+    <div class="bridge" id="bridge" aria-label="Meter bridge"></div>
+    <div class="console-scroll"><div class="console" id="console"></div></div>
+    <section class="card" id="eqcard">
+      <div class="card-h"><h2 id="eq-title">Channel 1 EQ</h2>
+        <div class="eqhead"><button class="b green" data-ck="eq" data-tip="eq" data-label="EQ in">EQ IN</button><span class="note">Double‑click a gain knob to reset it to 0 dB.</span></div></div>
+      <div class="eq-grid">
+        <div class="eq-bands" id="eqbands"></div>
+        <svg class="eqc" id="eqcurve" viewBox="0 0 620 220" role="img" aria-label="EQ frequency response"></svg>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-h">
+        <h2 id="schem-title">Channel 1 schematic</h2>
+        <div class="legend"><span><i></i>signal flowing</span><span><i class="d"></i>no signal</span><span><i class="x"></i>send or route switched off</span></div>
+      </div>
+      <div class="svg-scroll"><svg class="schem" id="schem" viewBox="0 0 1060 330" role="img" aria-label="Signal flow schematic of the selected channel"></svg></div>
+    </section>
+    <div class="grid2">
+      <section class="card">
+        <div class="card-h"><h2>Where the signal ends up</h2><span class="note">Each box is a bus or physical output. Chips show which sources reach it.</span></div>
+        <div class="outs" id="outs"></div>
+      </section>
+      <section class="card">
+        <div class="card-h"><h2>Exercises</h2><span class="progress" id="prog"></span></div>
+        <div class="ex" id="ex"></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="view" id="view-patchbay" hidden>
+    <div class="keyrow">
+      <span><b></b>half‑normal: patching into the lower jack breaks it</span>
+      <span><b class="f"></b>full normal: patching either jack breaks it</span>
+      <span><b class="x"></b>normal broken by a cable</span>
+      <span>Click an upper (output) jack, then a lower (input) jack, to patch. Click a patched input to pull its cable.</span>
+    </div>
+    <div class="bay-scroll"><div class="bay" id="bay"><svg class="cables" id="cables"></svg></div></div>
+    <div class="bay-side">
+      <section class="card"><div class="card-h"><h2>Patch cables</h2><button class="tool" id="clearp">Pull all cables</button></div><div class="plist" id="plist"></div></section>
+      <section class="card"><div class="card-h"><h2>Jack</h2></div><div id="jackinfo" class="note">Hover over a jack to see what it carries and where it is normalled.</div></section>
+    </div>
+  </section>
+
+  <section class="view" id="view-daw" hidden>
+    <div class="daw" id="daw"></div>
+    <p class="note">Each track records from the DAW input you pick under Input. On the patchbay, each channel's direct out (post‑fader as standard) is normalled to the DAW input with the same number, so channel n reaches DAW input n as soon as its fader is up. The input menu picks which of those you record. Patch a track bus over a DAW input when you want to combine several channels on one track. Each track plays back to the DAW output you pick under Output, and DAW output n is normalled to channel n's line input, so the output picks which console channel the track returns on. An armed track (REC) or one with IN pressed plays its input instead of the recording. A take is one pass of the four‑bar loop and replaces what was on the track.</p>
+  </section>
+
+  <section class="view rackview" id="view-reverb" hidden>
+    <div class="rack"><div class="unit rev" id="unit-rev"></div></div>
+    <div class="conn"><div class="out" id="rv-in"></div><div class="out" id="rv-out"></div></div>
+    <p class="note">FX send 1 is normalled to the reverb input, and the reverb output to echo return 1. Patch other sources in on the patchbay (for example a channel direct out, a track bus or an insert send). With MIX at 100% the unit outputs only the reverb, the usual setting on an aux send. Below 100% the dry signal comes through as well.</p>
+  </section>
+
+  <section class="view rackview" id="view-compressor" hidden>
+    <div class="rack" style="display:flex;flex-direction:column;gap:12px"><div class="unit cmp" id="unit-cmp"></div><div class="unit cmp" id="unit-cmp2"></div></div>
+    <div class="conn"><div class="out" id="cp-in"></div><div class="out" id="cp-out"></div><div class="out" id="cp2-in"></div><div class="out" id="cp2-out"></div></div>
+    <p class="note">Two outboard compressors, COMP 1 and COMP 2. Nothing is normalled to them: patch each one on the patchbay, usually channel insert send to Comp in and Comp out to the channel insert return, with INS pressed on that channel. You can also put one across the MIX or REC bus insert, or feed it from a track bus. On the console itself there are two more compressors, Dynamics 1 and 2 in the centre section, which any channel can pick with its DYNAMICS 1 or 2 button, and the MIX bus has the bus compressor.</p>
+  </section>
+
+  <section class="view" id="view-exam" hidden>
+    <section class="card">
+      <div class="card-h"><h2>Signal flow exam (formative)</h2><div class="row" style="flex:0 0 auto"><button class="tool" id="exStart">Start exam</button><button class="tool" id="exStop">End exam</button></div></div>
+      <p class="note" id="exBrief">Start the exam to zero the console and the studio. One condenser mic is waiting in the live room on <b>wall box 1</b> (Input X = channel 1). Bring the DAW return back on <b>channel 5</b>, and the click on any other free channel. Each block scores 1 (done right), 0.5 (partly done) or 0 (fundamental error, such as 48V switched on after the gain, or a mic unplugged with 48V on). Scores lock in once earned, so you can move on; a fundamental error sets the block to 0. Blocks the simulator cannot see are marked by the tutor: click their score to set 1, 0.5 or 0.</p>
+      <div class="extot" id="exTot"></div>
+      <div class="extab" id="exTab"></div>
+    </section>
+  </section>
+
+  <p class="note">Teaching model laid out like the SSL AWS 900 class diagrams: each strip runs meter, routing, dynamics, input, EQ, cue/FX, REC/MIX, SEL/SOLO/CUT, fader; the centre section has the oscillator, talkback, monitor, bus compressor, Dynamics 1 and 2, track bus and cue/FX masters, foldbacks and stereo returns; one master fader serves the REC or MIX bus. Simplified: eight channels, mono patch points, no surround, no gate/expander, approximate levels and EQ curves. Always confirm details on the real console.</p>
+</div>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id);
+const getP=p=>p.split('.').reduce((o,k)=>o[k],S);
+const setP=(p,v)=>{ const ks=p.split('.'), last=ks.pop(); ks.reduce((o,k)=>o[k],S)[last]=v; };
+let rq=0; const req=()=>{ if(!rq) rq=requestAnimationFrame(()=>{ rq=0; render(); }); };
+const NCH=8, CHS=[...Array(NCH).keys()];
+
+// ================= sources =================
+const KCOL={kick:'#c2453a',snare:'#d98a1c',hat:'#b8b04a',oh:'#c9a91c',room:'#9a7b4f',vocal:'#3f7fd1',bass:'#3fa45b',synth:'#8a5cc7',test:'#7a8592',daw:'#5a6472'};
+const SRCN={kick:'Kick',snare:'Snare',hat:'Hi‑hat',oh:'Overheads',room:'Room',vocal:'Vocal',bass:'Bass',synth:'Synth'};
+// Live room: what is plugged into each wall-box mic line. Levels are for a dynamic mic; condensers are 6 dB hotter.
+const INSTR={kick:{lvl:-36,mics:['dyn','cond'],d:'kick drum'},snare:{lvl:-40,mics:['dyn','cond'],d:'snare drum'},hat:{lvl:-52,mics:['cond','dyn'],d:'hi‑hat'},
+  oh:{lvl:-56,mics:['cond','dyn'],d:'drum kit from above'},room:{lvl:-58,mics:['cond','dyn'],d:'drum kit from across the room'},vocal:{lvl:-54,mics:['cond','dyn'],d:'singer'},
+  bass:{lvl:-38,di:-32,mics:['di','dyn'],d:'bass guitar'},synth:{lvl:-34,di:-30,mics:['di','dyn'],d:'synth'}};
+const MIC={dyn:{n:'Dynamic mic',off:0},cond:{n:'Condenser mic',off:6,p48:true},di:{n:'DI box',off:0}};
+const ROOMDEF=[['kick','dyn'],['snare','dyn'],['hat','cond'],['oh','cond'],['bass','di'],['synth','di'],['vocal','cond'],['room','cond']];
+function mlInfo(n){ const r=S.room[n-1]; if(!r||!r.src||!r.plug) return null; const I0=INSTR[r.src], M=MIC[r.mic];
+  const same=S.room.slice(0,n-1).filter(x=>x.src===r.src&&x.plug).length;
+  return {name:SRCN[r.src]+(same?' '+(same+1):''),k:r.src,lvl:r.mic==='di'?I0.di:I0.lvl+M.off,cond:!!M.p48,desc:I0.d+', '+M.n.toLowerCase()}; }
+const DEMO=['kick','snare','hat','oh','bass','synth',null,null];
+
+// ================= patch points =================
+const PT={};
+const O=(id,label,n,desc)=>PT[id]={id,io:'out',label,n,desc};
+const I=(id,label,n,desc,normal,full)=>PT[id]={id,io:'in',label,n,desc,normal,full:!!full};
+for(let k=1;k<=8;k++) O('ml'+k,'Mic line '+k,k,'Live‑room wall box, mic line '+k+'. Set what is plugged in on the Live room tab.');
+for(let k=1;k<=NCH;k++) I('mic'+k,'CH '+k+' mic in',k,'Channel '+k+' mic preamp input.','ml'+k,true);
+for(let k=1;k<=8;k++) O('dawo'+k,'DAW out '+k,k,'DAW output '+k+'. Carries the DAW tracks assigned to output '+k+' on the DAW tab. Line level.');
+for(let k=1;k<=NCH;k++) I('line'+k,'CH '+k+' line in',k,'Channel '+k+' line input (DAW return).','dawo'+k);
+for(let k=1;k<=NCH;k++){ O('is'+k,'CH '+k+' insert send',k,'Channel '+k+' insert send: the signal at the insert point.'); I('ir'+k,'CH '+k+' insert return',k,'Channel '+k+' insert return. Only used when INS is in.','is'+k); }
+for(let k=1;k<=NCH;k++) O('dir'+k,'CH '+k+' direct out',k,'Channel '+k+' direct output.');
+for(let k=1;k<=8;k++){ O('tb'+k,'Track bus '+k,k,'Track bus '+k+' output.'); }
+for(let k=1;k<=8;k++) I('dawi'+k,'DAW in '+k,k,'DAW record input '+k+'. Normalled from CH '+k+' direct out, so with the channel fader up the channel is already at the DAW.','dir'+k);
+O('mixo','Mix out','L/R','Stereo MIX bus output, after the mix insert, bus compressor and master fader.'); I('print','Print in','L/R','Stereo master recorder input, where the final mix is printed.','mixo');
+O('mis','Mix ins send','L/R','MIX bus insert send.'); I('mir','Mix ins rtn','L/R','MIX bus insert return. Only used when MIX INS is in.','mis');
+O('reco','Rec out','L/R','Stereo REC bus output, after the REC master fader.');
+O('ris','Rec ins send','L/R','REC bus insert send.'); I('rir','Rec ins rtn','L/R','REC bus insert return. Only used when REC INS is in.','ris');
+O('daw2','DAW mix','L/R','DAW stereo mix: the sum of all DAW tracks.'); I('exta','Ext A in','L/R','External monitor input A.','daw2'); I('extb','Ext B in','L/R','External monitor input B. Nothing normalled.');
+O('cuea','Cue A','L/R','Stereo cue A output, after the cue A master.'); O('cueb','Cue B','L/R','Stereo cue B output, after the cue B master.');
+for(let k=1;k<=4;k++) O('fx'+k,'FX send '+k,k,'FX bus '+k+' output, after its master.');
+I('rvi','Reverb in','REV','Outboard reverb input (Reverb tab).','fx1'); I('dli','Delay in','DLY','Outboard delay input.','fx2'); I('cpi','Comp 1 in','COMP 1','Outboard compressor 1 input (Compressors tab). Nothing normalled.'); I('cp2i','Comp 2 in','COMP 2','Outboard compressor 2 input (Compressors tab). Nothing normalled.'); I('eqi','EQ in','EQ','Outboard EQ input. Nothing normalled.');
+O('fba','Foldback A','F/B A','Foldback A output.'); O('fbb','Foldback B','F/B B','Foldback B output.');
+I('pha','Phones A','HP A','Headphone amp A, in the live room.','fba'); I('phb','Phones B','HP B','Headphone amp B, in the live room.','fbb');
+I('fbaext','F/B A ext in','F/B A','Foldback A external input, picked up by the EXT buttons on foldback A. Nothing normalled.'); I('fbbext','F/B B ext in','F/B B','Foldback B external input, picked up by the EXT buttons on foldback B. Nothing normalled.');
+O('rvo','Reverb out','REV','Outboard reverb output.'); O('dlo','Delay out','DLY','Outboard delay output.'); O('cpo','Comp 1 out','COMP 1','Outboard compressor 1 output.'); O('cp2o','Comp 2 out','COMP 2','Outboard compressor 2 output.'); O('eqo','EQ out','EQ','Outboard EQ output.');
+for(let k=1;k<=4;k++) I('ret'+k,'Echo return '+k,k,'Centre‑section echo return '+k+'.',{1:'rvo',2:'dlo'}[k]);
+O('osc','Oscillator','OSC','Centre‑section oscillator, 1 kHz, line level.'); O('noise','Pink noise','PINK','Pink noise generator, line level.');
+const r8=(a,b,n=8)=>[...Array(n)].map((_,k)=>[a&&a+(k+1),b&&b+(k+1)]);
+const BAY=[
+  [{t:'Mic lines (live room)',b:'Channel mic in',cols:r8('ml','mic')}],
+  [{t:'DAW outputs',b:'Channel line in',cols:r8('dawo','line')}],
+  [{t:'Ch insert send',b:'Ch insert return',cols:r8('is','ir')},{t:'Direct out',b:'DAW inputs',cols:r8('dir','dawi')}],
+  [{t:'Track bus out',b:'',cols:r8('tb',null)},{t:'Mix out',b:'Print',cols:[['mixo','print']]},{t:'Mix insert',b:'',cols:[['mis','mir']]},{t:'Rec out',b:'',cols:[['reco',null]]},{t:'Rec insert',b:'',cols:[['ris','rir']]}],
+  [{t:'DAW mix',b:'Ext monitor in',cols:[['daw2','exta'],[null,'extb']]},{t:'Cue out',b:'',cols:[['cuea',null],['cueb',null]]},{t:'FX sends',b:'FX unit inputs',cols:[['fx1','rvi'],['fx2','dli'],['fx3','cpi'],['fx4','eqi'],[null,'cp2i']]},{t:'Foldback out',b:'Headphone amps',cols:[['fba','pha'],['fbb','phb']]},{t:'',b:'Foldback ext in',cols:[[null,'fbaext'],[null,'fbbext']]}],
+  [{t:'FX unit outputs',b:'Echo returns',cols:[['rvo','ret1'],['dlo','ret2'],['cpo','ret3'],['eqo','ret4'],['cp2o',null]]},{t:'Test generators',b:'',cols:[['osc',null],['noise',null]]}],
+];
+
+// ================= state =================
+function defaultChannel(){
+  return {gain:40,trim:0,phantom:false,pad:false,inst:false,phase:false,flip:false,imute:false,
+    dyn:0,dynIP:false,dynOP:false,insPre:false,ins:false,eq:true,hpf:false,
+    hpfF:80,lfG:0,lfF:100,lfBell:false,lmfG:0,lmfF:600,lmfQ:1,hmfG:0,hmfF:2500,hmfQ:1,hfG:0,hfF:8000,hfBell:false,
+    cueOn:false,cue:5,cuePan:0,cuePost:false,cueB:false,cueEfx:false,
+    fx1On:false,fx1:5,fx1to3:false,fx1Efx:false,fx2On:false,fx2:5,fx2to4:false,fx2Efx:false,
+    direct:'post',rec:false,mix:false,trk:[],trkPan:false,trkPre:false,trkCue:false,pan:0,fader:75,cut:false,solo:false};
+}
+let TAKEV=0;
+const stemTake=k=>({kind:'stem',k,sigs:[{name:SRCN[k]+' (DAW)',k}],label:SRCN[k],ver:0});
+function defaultState(){
+  return {sel:0,ch:CHS.map(defaultChannel),
+    patch:[],
+    room:ROOMDEF.map(([src,mic])=>({src,mic,plug:true})),
+    daw:{play:false,click:{on:false,out:8},tr:CHS.map(k=>({inp:k+1,out:k+1,arm:false,mon:false,mute:false,vol:75,take:DEMO[k]?stemTake(DEMO[k]):null}))},
+    hp:{on:true,a:6,b:6,plugA:true,plugB:true},
+    rev:{inLvl:0,pre:20,decay:2.4,damp:6000,mix:100,out:0,byp:false},
+    comp:{thr:-24,ratio:4,att:10,rel:150,mk:6,byp:false},
+    comp2:{thr:-20,ratio:2,att:30,rel:300,mk:4,byp:false},
+    c:{mon:'mix',dim:false,mcut:false,mono:false,soloMode:'pfl',mixComp:false,mixIns:false,recIns:false,master:75,recMaster:75,mfSel:'rec',monLvl:8,
+       bc:{thr:-10,ratio:'4',att:'30',rel:'auto',mk:2},
+       dyn:[{in:true,ratio:4,thr:0,rel:0.5,fast:false,pk:false},{in:true,ratio:4,thr:0,rel:0.5,fast:false,pk:false}],
+       trkM:[1,2,3,4,5,6,7,8].map(()=>({lvl:8,afl:false})),
+       osc:{on:false,pink:false,lvl:8,freq:'1K',trk:false,rec:false,mix:false},
+       tb:{all:false,fba:false,fbb:false,lvl:6},
+       cueA:{lvl:8,afl:false},cueB:{lvl:8,afl:false},fx:[0,1,2,3].map(()=>({lvl:8,afl:false})),
+       fbA:{cue:false,m1:6,m1rec:false,m1ext:false,m2:6,m2mix:false,m2ext:false,crmon:false,lvl:8,cut:false,afl:false},
+       fbB:{cue:false,m1:6,m1rec:false,m1ext:false,m2:6,m2mix:false,m2ext:false,crmon:false,lvl:8,cut:false,afl:false},
+       ret:[7,6,0,0].map(lvl=>({lvl,studio:0,mix:false,rec:false,fba:false,fbb:false}))}};
+}
+let S=defaultState();
+const dB=v=>v<=0?'−∞':((v-75)*0.4).toFixed(1).replace('-','−');
+const fdrGain=(v,cut)=>(cut||v<=0)?0:Math.pow(10,((v-75)*0.4)/20);
+const lvlGain=v=>v<=0?0:Math.pow(v/8,2);
+const dbG=d=>Math.pow(10,d/20);
+
+// ================= patch resolution =================
+function srcOf(inId){
+  const c=S.patch.find(p=>p.to===inId); if(c) return c.from==='__none'?null:c.from;
+  const p=PT[inId]; if(!p||!p.normal) return null;
+  if(p.full && S.patch.some(q=>q.from===p.normal)) return null;
+  return p.normal;
+}
+const normalBroken=inId=>{ const p=PT[inId]; return !!p.normal && srcOf(inId)!==p.normal; };
+
+// ================= signal engine =================
+const EMPTY={sigs:[],lvl:null,cond:false};
+function addSig(set,s){ if(s && !set.some(x=>x.name===s.name)) set.push(s); }
+const union=(...ls)=>{ const o=[]; ls.forEach(l=>l&&l.forEach(s=>addSig(o,s))); return o; };
+const mk=sigs=>({sigs,lvl:sigs.length?0:null,cond:false});
+const CONSOLE_OUTS=Object.values(PT).filter(p=>p.io==='out'&&!/^(ml|osc|noise)/.test(p.id)).map(p=>p.id);
+const AFL_IDS=[['cueA','cuea'],['cueB','cueb'],['fx.0','fx1'],['fx.1','fx2'],['fx.2','fx3'],['fx.3','fx4'],['fbA','fba'],['fbB','fbb'],...[0,1,2,3,4,5,6,7].map(k=>['trkM.'+k,'tb'+(k+1)])];
+const OSCF={'48':48,'100':100,'400':400,'1K':1000,'10K':10000,'15K':15000};
+const oscName=()=>'Oscillator '+(S.c.osc.freq.endsWith('K')?S.c.osc.freq.slice(0,-1)+' kHz':S.c.osc.freq+' Hz');
+// which channel each centre Dynamics unit is assigned to (-1 = none)
+const dynCh=u=>S.ch.findIndex(c=>c.dyn===u);
+const dynOn=c=>c.dyn>0&&S.c.dyn[c.dyn-1].in;
+// AWS processing order (class diagram table): no switch EQ>DYN>INS, PRE INS>EQ>DYN, IP DYN>EQ>INS,
+// IP+PRE DYN>INS>EQ, OP EQ>INS>DYN, OP+PRE INS>DYN>EQ
+function procOrder(c){
+  if(c.dynIP) return c.insPre?['dyn','ins','eq']:['dyn','eq','ins'];
+  if(c.dynOP) return c.insPre?['ins','dyn','eq']:['eq','ins','dyn'];
+  return c.insPre?['ins','eq','dyn']:['eq','dyn','ins'];
+}
+function sourceFeeds(F){
+  for(let n=1;n<=8;n++){ const m=mlInfo(n); F['ml'+n]=m?{sigs:[{name:m.name,k:m.k}],lvl:m.lvl,cond:m.cond}:EMPTY; }
+  F.osc=mk([{name:'Oscillator 1 kHz',k:'test'}]); F.noise=mk([{name:'Pink noise',k:'test'}]);
+}
+function pass(F){
+  const feed=id=>{ const s=srcOf(id); return s?F[s]:EMPTY; };
+  // DAW: inputs from the previous pass, outputs to the patchbay
+  const dawTr=S.daw.tr.map((t,k)=>{ const inS=feed('dawi'+t.inp).sigs, monOn=t.arm||t.mon;
+    let out=monOn?inS:(S.daw.play&&t.take?t.take.sigs:[]); if(t.mute||t.vol<=0) out=[]; return {inS,out,monOn}; });
+  const clickSig=S.daw.click.on&&S.daw.play?[{name:'Click',k:'test'}]:[];
+  for(let o=1;o<=8;o++) F['dawo'+o]=mk(union(...dawTr.filter((_,k)=>S.daw.tr[k].out===o).map(x=>x.out), S.daw.click.out===o?clickSig:[]));
+  F.daw2=mk(union(...dawTr.map(x=>x.out)));
+  const B={rec:[],mix:[],cueA:[],cueB:[],fx:[[],[],[],[]],pfl:[],afl:[],trk:[[],[],[],[],[],[],[],[]]};
+  const chans=S.ch.map((c,i)=>{
+    const n=i+1, mf=feed('mic'+n), lf=feed('line'+n);
+    let warn='';
+    const micHas=mf.sigs.length>0, micOk=micHas && !c.inst && (!mf.cond||c.phantom);
+    if(micHas && c.inst) warn='INST is on, so the preamp ignores the mic input';
+    else if(micHas && mf.cond && !c.phantom) warn='Condenser mic needs 48V';
+    const micLvl=micOk? mf.lvl+c.gain-(c.pad?20:0) : null;
+    const lineLvl=lf.sigs.length? lf.lvl+c.trim : null;
+    const micSig=micOk?mf.sigs:[], lineSig=lf.sigs;
+    const chIn=c.flip?lineSig:micSig, alt=c.flip?micSig:lineSig, chLvl=c.flip?lineLvl:micLvl;
+    if(!warn && chLvl!==null){ if(chLvl>12) warn=c.flip?'Line input too hot: lower TRIM':'Preamp clipping: lower the gain'; else if(chLvl<-20) warn=c.flip?'Mic‑level signal on the line input':'Input very low: raise the gain'; }
+    let sig=c.imute?[]:chIn;
+    F['is'+n]=mk(sig); if(c.ins) sig=feed('ir'+n).sigs;
+    const pre=sig, post=fdrGain(c.fader,c.cut)>0?pre:[];
+    if(c.rec) B.rec=union(B.rec,post); if(c.mix) B.mix=union(B.mix,post);
+    const cueSrc=(c.cueOn&&c.cue>0)?(c.cueEfx?alt:(c.cuePost?post:pre)):[];
+    const tsrc=c.trkCue?cueSrc:(c.trkPre?pre:post);
+    c.trk.forEach(t=>{ if(c.trkPan && ((c.pan<0 && t%2===0)||(c.pan>0 && t%2===1))) return; B.trk[t-1]=union(B.trk[t-1],tsrc); });
+    if(!c.trkCue&&cueSrc.length){ if(c.cueB) B.cueB=union(B.cueB,cueSrc); else B.cueA=union(B.cueA,cueSrc); }
+    if(c.fx1On&&c.fx1>0){ const k=c.fx1to3?2:0; B.fx[k]=union(B.fx[k],c.fx1Efx?alt:post); }
+    if(c.fx2On&&c.fx2>0){ const k=c.fx2to4?3:1; B.fx[k]=union(B.fx[k],c.fx2Efx?alt:post); }
+    F['dir'+n]=mk(c.direct==='pre'?pre:c.direct==='post'?post:alt);
+    if(c.solo){ B.pfl=union(B.pfl,pre); B.afl=union(B.afl,post); }
+    return {micLvl,lineLvl,chLvl,chIn,alt,pre,post,warn,micFeed:mf,lineFeed:lf};
+  });
+  const C=S.c;
+  // centre-section oscillator: routed straight onto the track, REC and MIX buses
+  const O=C.osc, oscSig=O.lvl>0?union(O.on?[{name:oscName(),k:'test'}]:[], O.pink?[{name:'Pink noise',k:'test'}]:[]):[];
+  if(O.trk) B.trk=B.trk.map(t=>union(t,oscSig)); if(O.rec) B.rec=union(B.rec,oscSig); if(O.mix) B.mix=union(B.mix,oscSig);
+  const retIn=C.ret.map((_,k)=>feed('ret'+(k+1)).sigs);
+  let fbAextra=[], fbBextra=[];
+  C.ret.forEach((r,k)=>{ const lv=r.lvl>0?retIn[k]:[], st=r.studio>0?retIn[k]:[];
+    if(r.mix) B.mix=union(B.mix,lv); if(r.rec) B.rec=union(B.rec,lv); if(r.fba) fbAextra=union(fbAextra,st); if(r.fbb) fbBextra=union(fbBextra,st); });
+  const tbSig=C.tb.lvl>0?[{name:'Talkback',k:'test'}]:[];
+  if(C.tb.all||C.tb.fba) fbAextra=union(fbAextra,tbSig); if(C.tb.all||C.tb.fbb) fbBextra=union(fbBextra,tbSig);
+  F.mis=mk(B.mix); F.mixo=mk(fdrGain(C.master,false)>0?(C.mixIns?feed('mir').sigs:B.mix):[]);
+  F.ris=mk(B.rec); F.reco=mk(fdrGain(C.recMaster,false)>0?(C.recIns?feed('rir').sigs:B.rec):[]);
+  B.trk.forEach((t,k)=>F['tb'+(k+1)]=mk(C.trkM[k].lvl>0?t:[]));
+  B.fx.forEach((t,k)=>F['fx'+(k+1)]=mk(C.fx[k].lvl>0?t:[]));
+  F.cuea=mk(C.cueA.lvl>0?B.cueA:[]); F.cueb=mk(C.cueB.lvl>0?B.cueB:[]);
+  // monitor source before solo, used by the foldbacks' CR MON button
+  const crSrc=C.mon==='mix'?F.mixo.sigs:C.mon==='rec'?F.reco.sigs:C.mon==='trk'?union(...[1,2,3,4,5,6,7,8].map(k=>F['tb'+k].sigs)):feed(C.mon).sigs;
+  const fb=(f,cue,ext,extra)=>{ if(f.cut||f.lvl<=0) return [];
+    return union(f.cue?cue:[], f.m1>0?union(f.m1rec?F.reco.sigs:[],f.m1ext?ext:[]):[], f.m2>0?union(f.m2mix?F.mixo.sigs:[],f.m2ext?ext:[]):[], f.crmon?crSrc:[], extra); };
+  F.fba=mk(fb(C.fbA,F.cuea.sigs,feed('fbaext').sigs,fbAextra)); F.fbb=mk(fb(C.fbB,F.cueb.sigs,feed('fbbext').sigs,fbBextra));
+  const tag=(p,l)=>l.map(s=>({name:p+': '+s.name,k:s.k,fx:true}));
+  const rin=feed('rvi').sigs, RV=S.rev;
+  F.rvo=mk(RV.byp?rin:union(RV.mix<100?rin:[],RV.mix>0?tag('Reverb',rin):[]));
+  F.dlo=mk(tag('Delay',feed('dli').sigs)); F.cpo=mk(feed('cpi').sigs); F.cp2o=mk(feed('cp2i').sigs); F.eqo=mk(feed('eqi').sigs);
+  const chSolo=S.ch.some(c=>c.solo);
+  const afls=AFL_IDS.filter(([p])=>getP('c.'+p).afl).map(([,id])=>id);
+  const anySolo=chSolo||afls.length>0;
+  let mon=[];
+  if(anySolo) mon=union(chSolo?(C.soloMode==='pfl'?B.pfl:B.afl):[], ...afls.map(id=>F[id].sigs));
+  else if(C.mon==='mix') mon=F.mixo.sigs; else if(C.mon==='rec') mon=F.reco.sigs;
+  else if(C.mon==='trk') mon=union(...B.trk); else if(C.mon==='exta') mon=feed('exta').sigs; else if(C.mon==='extb') mon=feed('extb').sigs;
+  if(C.mcut||C.monLvl<=0) mon=[];
+  const solo=anySolo?union(chSolo?(C.soloMode==='pfl'?B.pfl:B.afl):[], ...afls.map(id=>F[id].sigs)):[];
+  const D={mon,solo,anySolo,chSolo,afls,pha:S.hp.on&&S.hp.plugA&&S.hp.a>0?feed('pha').sigs:[],phb:S.hp.on&&S.hp.plugB&&S.hp.b>0?feed('phb').sigs:[],phaAmp:feed('pha').sigs,print:feed('print').sigs,dawi:[1,2,3,4,5,6,7,8].map(k=>feed('dawi'+k).sigs),dawTr};
+  return {B,chans,D};
+}
+function evalAll(){
+  const F={}; sourceFeeds(F); CONSOLE_OUTS.forEach(id=>F[id]=EMPTY);
+  let R, prev='', loop=false;
+  for(let it=0;it<10;it++){
+    R=pass(F);
+    const key=JSON.stringify(CONSOLE_OUTS.map(id=>F[id].sigs.map(s=>s.name)));
+    if(key===prev) break; prev=key; if(it===9) loop=true;
+  }
+  R.F=F; R.loop=loop; return R;
+}
+
+// ================= tips =================
+const TIPS={
+  micSel:'Which live‑room source (mic line) feeds this channel\'s mic input. Mic line n is normalled to channel n; choosing another line patches a cable on the patchbay. The line input is the DAW return, set on the DAW tab and patchbay.',
+  lineSel:'What feeds this channel\'s line input. A shortcut for the patchbay: DAW output n is normalled to channel n.',
+  gain:'Mic preamp GAIN (+15 to +75 dB). Too high clips the preamp; too low leaves the signal near the noise floor. The fader cannot fix either.',
+  trim:'Line input TRIM (−20 to +20 dB). Matches the level coming back from the DAW.',
+  phantom:'+48V phantom power on the mic input. Condenser mics need it; dynamic mics and DI boxes do not.',
+  pad:'20 dB pad before the mic preamp.',
+  inst:'INST: the preamp listens to the front‑panel instrument jack instead of the mic input. Nothing is plugged into the front jacks here.',
+  phase:'Ø: polarity reverse.',
+  flip:'FLIP swaps the inputs. Off: mic feeds the channel and the line input feeds the alternate (EFX) path. On: line feeds the channel (mixing from the DAW) and the mic goes to the EFX path.',
+  imute:'Input mute, right after the input stage.',
+  dynIP:'DYNAMICS IP: the dynamics sit at the channel input, before the EQ. Order: IP = DYN > EQ > INS; IP + PRE = DYN > INS > EQ. With no switch the order is EQ > DYN > INS.',
+  dynOP:'DYNAMICS OP: the dynamics sit at the channel output. Order: OP = EQ > INS > DYN; OP + PRE = INS > DYN > EQ.',
+  dynU:'Assigns centre‑section Dynamics unit 1 or 2 to this channel. The AWS has no compressor on each channel: there are two shared units in the centre, and each can be on one channel at a time. Pressing it here takes the unit off any other channel.',
+  dynUnit:'Centre Dynamics unit (compressor). RATIO 1–20, THRESHOLD +10 to −20, RELEASE 0.1–4 s, FST ATK for a fast attack. The header shows which channel it is assigned to; the LEDs show gain reduction in dB.',
+  dynFast:'FST ATK: fast attack (1 ms instead of 10 ms).', dynPk:'PK: peak detection. Shown for completeness; the simulator\'s detector does not change.',
+  dynIn:'IN: switches the unit in. Off, the assigned channel passes through unprocessed.',
+  sel:'SEL: selects this channel (for the EQ panel and the schematic).', chMeter:'Channel meter, at the top of the strip as on the desk: metering stage 1. Gain the input so it sits just under the orange.',
+  cuePan:'Cue pan: places this channel in the stereo cue mix.',
+  trkM:'Track bus master level, with AFL to check the bus on the speakers.',
+  oscLvl:'Oscillator level.', oscFreq:'Oscillator frequency. Click to cycle 48 Hz to 15 kHz.', oscOn:'OSC ON / PINK ON: switches on the tone or the pink noise.',
+  oscRoute:'Sends the oscillator straight onto the track buses, the REC bus or the MIX bus, for line‑up.',
+  tb:'Talkback: TB ALL talks to both foldbacks, F/B A or F/B B to one. The control‑room speakers dim while you talk.', tbLvl:'Talkback level into the foldbacks.',
+  mfSel:'Picks which bus the master fader controls: REC or MIX. The fader moves to that bus\'s own setting; the other bus keeps its level.',
+  fbCue:'CUE: puts the stereo cue (A on foldback A, B on foldback B) into this foldback. Meter it with AFL before you raise the headphone amp.',
+  fbMix1:'MIX 1 level, for the sources picked with REC and EXT.', fbMix2:'MIX 2 level, for the sources picked with MIX and EXT.',
+  fbRec:'Adds the REC bus to this foldback through MIX 1.', fbMix:'Adds the MIX bus (off‑tape) to this foldback through MIX 2.',
+  fbExt:'Adds the foldback EXT input (patchbay) through this mix knob.', fbCr:'CR MON: sends what the control room is listening to (the monitor source) to this foldback.',
+  retStudio:'STUDIO: how much of this stereo return goes to the foldbacks picked with FB A / FB B.',
+  insPre:'INSERT PRE: the insert point moves before the EQ. Off: after the EQ.',
+  ins:'INS: switches the insert return into the path. Patch outboard into the insert send and return on the patchbay. With nothing patched the return is normalled to the send.',
+  eq:'EQ IN: switches the 4‑band EQ and high‑pass filter into the path.',
+  hpf:'HPF in: the high‑pass filter, part of the EQ section.',
+  eqOpen:'Selects this channel and shows its EQ knobs in the panel below the console.',
+  eqKnob:'EQ knob. Drag up or down, or use the arrow keys. Double‑click a gain knob to reset it to 0 dB.',
+  bell:'BELL: changes the shelf into a bell (peaking) curve.',
+  cueOn:'Switches the stereo cue send on.', cue:'Cue send level.',
+  cuePost:'POST: cue taken after the fader. Off: before the fader, so fader moves do not change the headphone mix.',
+  cueB:'B: send to cue B instead of cue A.', cueEfx:'EFX: the send takes the alternate input, the one NOT feeding the channel path. On mic, EFX sends the line input (DAW return); FLIPped to line, EFX sends the mic. With CUE → TRK on, that signal goes to the track buses.',
+  fx1On:'Switches the FX 1/3 send on.', fx1:'FX 1/3 send level, post‑fader.', fx1to3:'Moves the send from FX 1 to FX 3.', fx1Efx:'EFX: send the alternate input.',
+  fx2On:'Switches the FX 2/4 send on.', fx2:'FX 2/4 send level, post‑fader.', fx2to4:'Moves the send from FX 2 to FX 4.', fx2Efx:'EFX: send the alternate input.',
+  direct:'Direct output source: PRE, POST or EFX. Click to cycle. The direct out of channel n is normalled to DAW input n, so in POST the channel is at the DAW whenever its fader is up. PRE sends it regardless of the fader.',
+  rec:'REC: post‑fader to the stereo REC bus.', mix:'MIX: post‑fader to the stereo MIX bus.',
+  trk:'Track bus assign. Use the track buses to combine several channels onto one DAW track: patch Track bus n to a DAW input on the patchbay. A single channel reaches its own DAW input through its direct out, with no patching.',
+  trkPan:'Track PAN: the channel pan picks odd (left) or even (right) buses of the pair. Centre feeds both.',
+  trkCue:'CUE → TRK: the cue send feeds the track buses instead of the cue bus. The track buses then get whatever the cue send carries, at the CUE level: before or after the fader (POST), or with EFX the alternate input. Typical use: the channel is FLIPped to monitor the DAW return, cue EFX picks up the mic, and CUE → TRK sends that mic to the track bus to record. Cue ON must be lit and the CUE level up.', dirPre:'Direct out PRE: the direct out is taken before the fader. Off (both unlit) = POST, after the fader. Direct out n is normalled to DAW input n.', dirEfx:'Direct out EFX: the direct out carries the alternate input, the one not feeding the channel path (the mic when the channel is FLIPped to line, or the line when it is on mic).',
+  trkPre:'Track PRE: track buses fed before the fader, so the fader only changes your monitor mix.',
+  plug:'Plugs this station\'s cable into its wall‑box socket, or pulls it out. Unplugged, the mic line is silent and the console channel it feeds is free, for example to FLIP it to the DAW return.',
+  pan:'Pan.', fader:'Channel fader. Fully down (−∞) means nothing post‑fader.',
+  cut:'CUT: mute after the fader. Pre‑fader sends still work.', solo:'SOLO to the PFL or AFL bus.',
+  master:'MAIN MIX master fader: the level of the stereo MIX bus after the bus insert and bus compressor. It feeds the mix output, the print recorder and the monitors.',
+  mon:'Control‑room monitor source when nothing is soloed.', mcut:'Speaker CUT: silences the control‑room speakers. Nothing else changes.', monLvl:'Control‑room speaker level, in dB. 0 dB is the calibrated listening level.', recMaster:'REC master fader: the level of the stereo REC bus leaving the console (Rec out).', vu:'VU meter: shows the average (RMS) level with slow, 300 ms needle ballistics, like the VU meters on the console. 0 VU = −18 dBFS.', bc:'Bus compressor on the MIX bus, after the MIX insert and before the MIX master fader. The needle shows gain reduction in dB.', bcThr:'Bus compressor threshold.', bcMk:'Bus compressor make‑up gain.', bcRatio:'Bus compressor ratio: 2, 4 or 10 to 1. Click to cycle.', bcAtt:'Bus compressor attack. Click to cycle. 30 ms lets the drum transients through.', bcRel:'Bus compressor release. Click to cycle. AUTO follows the programme.', dynKnob:'Channel compressor control. Applies when DYN IP or OP is pressed on the strip.', dynFast:'FAST attack (1 ms) instead of the normal 10 ms.', cueMeter:'Cue and solo meters: what each cue bus is sending, and what the solo/AFL system is putting on the speakers.', dim:'Dims the speakers.', mono:'Mono check.',
+  soloMode:'Channel solo mode. PFL hears before the fader. AFL hears after it.', mixComp:'IN switches the stereo bus compressor into the MIX bus.',
+  mixIns:'MIX INS: switches the MIX bus insert return in. Patch outboard on the patchbay.', recIns:'REC INS: switches the REC bus insert return in.',
+  mflip:'Master FLIP: flips all eight channels at once, from recording (mic) to mixing (DAW returns).',
+  cueM:'Cue master level, in dB (0 dB = unity, −∞ = off). Sets the overall level of this cue bus before it feeds the foldbacks and the cue output.',
+  fxM:'FX send master level. Sets the level leaving the console to the effect unit.',
+  afl:'AFL: listen to this master on the speakers, after its level control.',
+  fbLvl:'Foldback output level to the headphone amp.', fbCut:'Cuts this foldback output.',
+  retLvl:'Stereo return level into the REC or MIX bus.', retMix:'Stereo return to the MIX bus.', retRec:'Stereo return to the REC bus.', retFba:'Stereo return to foldback A or B, at the STUDIO level.',
+  dClick:'Click track (metronome). It plays on the beat while the DAW plays, out of the DAW output you pick. Bring it back on a console channel and send it to the cue only, never to the MIX bus.',
+  hpOn:'Headphone amp power. Off, nothing reaches the headphones.', hpLvl:'Headphone amp level for this output. Start low before the musician puts the headphones on.', hpPlug:'Headphones plugged into the amp and placed by the stand.',
+  dPlay:'Play the DAW. It stays locked to the band\'s four‑bar loop. Starts the audio if needed.', dStop:'Stop the DAW. Recording in progress is discarded.',
+  dRec:'Record one pass of the loop onto every armed track, starting now.', dClear:'Removes the recording from every track.', dDemo:'Puts the demo takes back on tracks 1–6.',
+  dArm:'REC arm: this track records from its DAW input when you press RECORD. While armed it plays its input, not the recording.',
+  dMon:'IN: input monitoring. The track plays its DAW input instead of the recording.', dMute:'Mutes this track\'s output.', dClr:'CLR: empties this track, removing its recording.',
+  dIn:'Which DAW input this track records from. DAW input n is normalled from channel n\'s direct out, so this picks which console channel you record (or whatever you patched over that DAW input).', dOut:'Which DAW output this track plays to. DAW output n is normalled to channel n\'s line input.', dVol:'Track volume in the DAW.',
+  rvIn:'Input level into the reverb.', rvPre:'Pre‑delay: the gap before the reverb starts. Keeps the dry sound clear of the tail.', rvDecay:'Decay time (RT60): how long the tail takes to fall by 60 dB.',
+  rvDamp:'Damping: cuts the high frequencies of the tail. Lower sounds darker.', rvMix:'Wet/dry mix. 100% is wet only, the usual setting on an aux send.', rvOut:'Output level.',
+  byp:'BYPASS: the unit passes its input straight to its output.',
+  cpThr:'Threshold: the level above which the compressor turns the signal down.', cpRatio:'Ratio: how much it turns down above the threshold. 4:1 means 4 dB over becomes 1 dB over.',
+  cpAtt:'Attack: how quickly gain reduction starts.', cpRel:'Release: how quickly the gain comes back.', cpMk:'Make‑up gain after compression.',
+};
+const tipEl=$('tip');
+function showTip(t){ const k=t.closest&&t.closest('[data-tip]'); if(!k) return; const s=TIPS[k.dataset.tip]; if(!s) return; tipEl.innerHTML='<b>'+(k.dataset.label||k.dataset.tip).toUpperCase()+'</b><span>'+s+'</span>'; }
+
+// ================= rotary knobs =================
+const arcPt=(a,r=16)=>{ const t=(a-90)*Math.PI/180; return [20+r*Math.cos(t),20+r*Math.sin(t)]; };
+const arc=(a0,a1)=>{ if(Math.abs(a1-a0)<0.5) return ''; const [x0,y0]=arcPt(Math.min(a0,a1)), [x1,y1]=arcPt(Math.max(a0,a1)); return `M${x0} ${y0} A16 16 0 ${Math.abs(a1-a0)>180?1:0} 1 ${x1} ${y1}`; };
+const ARC_FULL=arc(-135,135);
+function RK(o){
+  return `<div class="rkw"><div class="rk ${o.sm?'sm':''} ${o.lg?'lg':''}" tabindex="0" role="slider" aria-label="${o.aria||o.label}" ${o.ck?`data-ck="${o.ck}"`:`data-path="${o.path}"`} data-min="${o.min}" data-max="${o.max}" data-step="${o.step||1}" ${o.log?'data-log="1"':''} data-fmt="${o.fmt||'lvl'}" data-tip="${o.tip||''}" data-label="${o.aria||o.label}" style="--kc:${o.color||'var(--k-lvl)'}"><svg viewBox="0 0 40 40" aria-hidden="true"><path class="rk-track" d="${ARC_FULL}"/><path class="rk-arc"/><circle cx="20" cy="20" r="11" class="rk-body"/><line class="rk-ptr" x1="20" y1="20" x2="20" y2="11"/></svg></div><span class="rk-l">${o.label}</span><span class="rk-v"></span></div>`;
+}
+const pathOf=k=>k.dataset.ck?`ch.${S.sel}.${k.dataset.ck}`:k.dataset.path;
+const kmeta=k=>({min:+k.dataset.min,max:+k.dataset.max,step:+k.dataset.step,log:!!k.dataset.log});
+function posOf(k){ const m=kmeta(k), v=getP(pathOf(k)); return m.log?Math.log(v/m.min)/Math.log(m.max/m.min):(v-m.min)/(m.max-m.min); }
+function setPos(k,p){
+  const m=kmeta(k); p=Math.max(0,Math.min(1,p));
+  let v=m.log?m.min*Math.pow(m.max/m.min,p):m.min+p*(m.max-m.min);
+  if(m.log) v=v<100?Math.round(v):v<1000?Math.round(v/5)*5:Math.round(v/50)*50;
+  else v=Math.round(v/m.step)*m.step;
+  v=+v.toFixed(2); setP(pathOf(k),v); req();
+}
+const FMT={hz:v=>v>=1000?(v/1000).toFixed(v<10000?1:0)+'k':Math.round(v)+'', db:v=>(v>0?'+':v<0?'−':'')+Math.abs(v), q:v=>v.toFixed(1), lvl:v=>v+'',
+  ms:v=>Math.round(v)+' ms', lvdb:v=>v<=0?'−∞':FMT.db(Math.round(40*Math.log10(v/8))), rtdb:v=>v<=0?'−∞':FMT.db(Math.round(20*Math.log10(v*0.12))), s:v=>v.toFixed(1)+' s', pct:v=>Math.round(v)+'%', ratio:v=>(v%1?v.toFixed(1):v)+':1'};
+function drawKnobs(){
+  document.querySelectorAll('.rk').forEach(k=>{
+    const m=kmeta(k), v=getP(pathOf(k)), p=posOf(k), a=-135+270*p;
+    const a0=m.min<0&&m.max>0?-135+270*(-m.min/(m.max-m.min)):-135;
+    k.querySelector('.rk-arc').setAttribute('d',arc(a0,a));
+    k.querySelector('.rk-ptr').setAttribute('transform',`rotate(${a} 20 20)`);
+    k.parentNode.querySelector('.rk-v').textContent=FMT[k.dataset.fmt](v);
+    k.setAttribute('aria-valuenow',v);
+  });
+}
+let drag=null;
+document.addEventListener('pointerdown',e=>{ const k=e.target.closest('.rk'); if(!k) return; e.preventDefault(); k.setPointerCapture(e.pointerId); drag={k,y:e.clientY,p:posOf(k)}; k.focus(); });
+document.addEventListener('pointermove',e=>{ if(drag) setPos(drag.k,drag.p+(drag.y-e.clientY)/160); });
+document.addEventListener('pointerup',()=>{ drag=null; });
+document.addEventListener('keydown',e=>{ const k=e.target.closest&&e.target.closest('.rk'); if(!k) return;
+  const d={ArrowUp:1,ArrowRight:1,ArrowDown:-1,ArrowLeft:-1}[e.key]; if(!d) return; e.preventDefault();
+  const m=kmeta(k); setPos(k,posOf(k)+d*(m.log?1/60:m.step/(m.max-m.min))+d*1e-6); });
+document.addEventListener('dblclick',e=>{ const k=e.target.closest('.rk'); if(!k) return; if(+k.dataset.min<0&&+k.dataset.max>0){ setP(pathOf(k),0); req(); } });
+
+// ================= console UI =================
+const con=$('console');
+const btn=(attrs,label,color)=>`<button class="b ${color||'amber'}" ${attrs} data-label="${label}">${label}</button>`;
+const opts=list=>list.map(id=>`<option value="${id}">${PT[id].label}</option>`).join('');
+function stripHTML(i){
+  const t=(k,l,c)=>btn(`data-ch="${i}" data-k="${k}" data-tip="${k}"`,l,c);
+  // range-input knob; col = AWS cap colour (red MIC, grey LINE, green sends, blue pans)
+  const knob=(k,l,mn=0,mx=10,col='')=>`<div class="knob ${col}" data-tip="${k}" data-label="${l}"><label for="k-${k}-${i}">${l}</label><input type="range" id="k-${k}-${i}" min="${mn}" max="${mx}" step="1" data-ch="${i}" data-k="${k}"><output id="o-${k}-${i}"></output></div>`;
+  let trk=''; for(let n=1;n<=8;n++) trk+=`<button class="b sq amber" data-ch="${i}" data-trk="${n}" data-tip="trk" data-label="Track bus ${n}">${n}</button>`;
+  const du=u=>`<button class="b sq green" data-ch="${i}" data-dynu="${u}" data-tip="dynU" data-label="Dynamics ${u}">${u}</button>`;
+  // Top to bottom as on the AWS 900 (class diagrams): meter, routing, dynamics, input, EQ, cue/FX, REC/MIX, SEL/SOLO/CUT, fader
+  return `<div class="strip" data-strip="${i}">
+    <div class="strip-head"><div class="num">CH ${i+1}</div>
+      <label class="srcsel" data-tip="micSel" data-label="Live room source"><span>MIC LINE (LIVE ROOM)</span><select id="ms-${i}" data-ch="${i}" data-k="micSel"><option value="">nothing</option>${opts([1,2,3,4,5,6,7,8].map(k=>'ml'+k))}<option value="other" disabled>patched elsewhere</option></select></label></div>
+    <div class="sec aws-meter" data-tip="chMeter" data-label="Channel meter"><div class="meter top"><i id="m-${i}"></i></div>
+      <div class="lvl" id="lv-${i}" data-tip="gain" data-label="Input level"></div><div class="warn" id="warn-${i}"></div></div>
+    <div class="sec"><div class="sec-l">Routing</div>
+      <div class="row">${trk}</div>
+      <div class="row">${t('trkPre','PRE')}${t('trkPan','PAN')}</div>
+      <div class="row">${t('trkCue','CUE → TRK','blue')}</div></div>
+    <div class="sec"><div class="sec-l">Dynamics</div>
+      <div class="row">${t('dynIP','IP','green')}${t('dynOP','OP','green')}${du(1)}${du(2)}</div></div>
+    <div class="sec"><div class="sec-l">Input</div>
+      ${knob('gain','MIC',15,75,'red')}${knob('trim','LINE',-20,20,'grey')}
+      <div class="row">${t('phantom','48V','red')}${t('inst','INST')}${t('pad','PAD')}</div>
+      <div class="row">${t('phase','Ø')}${t('flip','FLIP','blue')}</div></div>
+    <div class="sec"><div class="sec-l">EQ</div>
+      <div class="row">${t('hpf','HPF')}${t('eq','EQ IN','green')}</div>
+      <div class="row">${t('insPre','PRE')}${t('ins','INS IN','green')}</div>
+      <div class="row">${btn(`data-eqopen="${i}" data-tip="eqOpen"`,'EQ KNOBS ↓','amber')}</div></div>
+    <div class="sec"><div class="sec-l">Cue / FX</div>
+      <div class="row">${t('dirPre','DIR PRE')}${t('dirEfx','DIR EFX','blue')}</div>
+      <div class="row">${t('cuePost','POST')}</div>
+      ${knob('cue','CUE ST',0,10,'green')}${knob('cuePan','PAN',-5,5,'blue')}
+      <div class="row">${t('cueOn','ON','green')}${t('cueEfx','EFX','blue')}${t('cueB','CUE B')}</div>
+      ${knob('fx1','FX1',0,10,'green')}<div class="row">${t('fx1On','ON','green')}${t('fx1Efx','EFX','blue')}${t('fx1to3','FX3')}</div>
+      ${knob('fx2','FX2',0,10,'green')}<div class="row">${t('fx2On','ON','green')}${t('fx2Efx','EFX','blue')}${t('fx2to4','FX4')}</div></div>
+    <div class="sec"><div class="row">${t('rec','REC','red')}${t('mix','MIX','green')}</div>
+      <div class="knob blue" data-tip="pan" data-label="Pan"><label for="pan-${i}">PAN</label><input type="range" id="pan-${i}" min="-5" max="5" step="1" data-ch="${i}" data-k="pan"><output id="o-pan-${i}"></output></div></div>
+    <div class="sec"><div class="row">${t('sel','SEL')}</div><div class="row">${t('solo','SOLO','yellow')}${t('cut','CUT','red')}</div>
+      <div class="fader-wrap" data-tip="fader" data-label="Fader">
+        <input class="fader" type="range" id="f-${i}" min="0" max="100" step="1" data-ch="${i}" data-k="fader" aria-label="Channel ${i+1} fader">
+        <div class="fader-db" id="db-${i}"></div>
+      </div></div>
+  </div>`;
+}
+const VUP=v=>Math.max(0,Math.min(1,(Math.pow(10,v/20)-0.1)/(1.4125-0.1)));
+const nAng=p=>-48+96*p;
+function vuSVG(id,label){
+  const pt=(p,r)=>{ const a=nAng(p)*Math.PI/180; return [60+r*Math.sin(a),70-r*Math.cos(a)]; };
+  let t=''; [-20,-10,-7,-5,-3,-2,-1,0,1,2,3].forEach(v=>{ const [x0,y0]=pt(VUP(v),44),[x1,y1]=pt(VUP(v),[-20,-10,-7,-5,-3,0,3].includes(v)?50:48); t+=`<line class="${v>0?'vu-red':'vu-ink'}" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/>`; });
+  [[-20,'20'],[-10,'10'],[-7,'7'],[-5,'5'],[-3,'3'],[0,'0'],[3,'+3']].forEach(([v,l])=>{ const [x,y]=pt(VUP(v),57); t+=`<text class="vu-txt ${v>0?'r':''}" x="${x}" y="${y+2}" text-anchor="middle">${l}</text>`; });
+  const [a0x,a0y]=pt(0,44),[a1x,a1y]=pt(VUP(0),44),[a2x,a2y]=pt(1,44);
+  return `<div class="vu" data-tip="vu" data-label="VU meter"><svg viewBox="0 0 120 70" aria-hidden="true"><rect class="vu-face" x="1" y="1" width="118" height="68" rx="4"/>
+    <path class="vu-ink" d="M${a0x} ${a0y} A44 44 0 0 1 ${a1x} ${a1y}"/><path class="vu-red" stroke-width="2.5" d="M${a1x} ${a1y} A44 44 0 0 1 ${a2x} ${a2y}"/>${t}
+    <text class="vu-txt" x="10" y="64">VU</text><text class="vu-txt" x="110" y="64" text-anchor="end">${label}</text>
+    <line class="vu-n" id="vn-${id}" x1="60" y1="70" x2="60" y2="18" transform="rotate(-48 60 70)"/></svg></div>`;
+}
+const GRP=g=>1-Math.pow(Math.min(20,Math.max(0,g))/20,0.6);
+function grSVG(id){
+  const pt=(p,r)=>{ const a=nAng(p)*Math.PI/180; return [60+r*Math.sin(a),70-r*Math.cos(a)]; };
+  let t=''; [0,2,4,8,12,20].forEach(g=>{ const [x0,y0]=pt(GRP(g),44),[x1,y1]=pt(GRP(g),50),[x,y]=pt(GRP(g),57); t+=`<line class="vu-ink" x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}"/><text class="vu-txt" x="${x}" y="${y+2}" text-anchor="middle">${g}</text>`; });
+  const [a0x,a0y]=pt(0,44),[a2x,a2y]=pt(1,44);
+  return `<svg viewBox="0 0 120 70" aria-label="Bus compressor gain reduction meter"><rect class="vu-face" x="1" y="1" width="118" height="68" rx="4"/><path class="vu-ink" d="M${a0x} ${a0y} A44 44 0 0 1 ${a2x} ${a2y}"/>${t}
+    <text class="vu-txt" x="60" y="64" text-anchor="middle">GAIN REDUCTION dB</text><line class="vu-n" id="vn-${id}" x1="60" y1="70" x2="60" y2="18" transform="rotate(48 60 70)"/></svg>`;
+}
+function setNeedle(id,p){ const n=$('vn-'+id); if(n) n.setAttribute('transform',`rotate(${nAng(p)} 60 70)`); }
+const pb=(path,l,col,tip)=>btn(`data-path="${path}" data-tip="${tip}"`,l,col);
+function centreHTML(){
+  const c=(k,v,l,col,tip)=>btn(`data-c="${k}" data-v="${v}" data-tip="${tip||k}"`,l,col);
+  const master=(path,label,tip)=>`<div class="mcell">${RK({path:path+'.lvl',label,min:0,max:10,sm:true,tip,aria:label+' master',fmt:'lvdb'})}${pb(path+'.afl','AFL','yellow','afl')}</div>`;
+  const lvk=(path,label,tip,col)=>RK({path,label,min:0,max:10,sm:true,tip,aria:label,fmt:'lvdb',color:col});
+  // F/B A and B as on the desk: MIX 1 (REC, EXT), MIX 2 (MIX, EXT), CUE, CR MON, CUT, LEVEL, AFL
+  const fbk=(f,L)=>`<div class="pnl fbk"><div class="pnl-t">F/B ${L}</div>
+      <div class="kb">${lvk(`c.${f}.m1`,'MIX 1','fbMix1','#e9e6df')}<div class="col">${pb(`c.${f}.m1rec`,'REC','amber','fbRec')}${pb(`c.${f}.m1ext`,'EXT','amber','fbExt')}</div></div>
+      <div class="kb">${lvk(`c.${f}.m2`,'MIX 2','fbMix2','#2f6fa3')}<div class="col">${pb(`c.${f}.m2mix`,'MIX','amber','fbMix')}${pb(`c.${f}.m2ext`,'EXT','amber','fbExt')}</div></div>
+      <div class="col">${pb(`c.${f}.cue`,'CUE '+L,'green','fbCue')}${pb(`c.${f}.crmon`,'CR MON','amber','fbCr')}${pb(`c.${f}.cut`,'CUT','red','fbCut')}</div>
+      <div class="kb">${lvk(`c.${f}.lvl`,'LEVEL','fbLvl','#e9e6df')}${pb(`c.${f}.afl`,'AFL','yellow','afl')}</div></div>`;
+  // stereo returns: STUDIO send to F/B A/B, REC/MIX, LEVEL, AFL
+  const ret=k=>`<div class="pnl ret"><div class="pnl-t">ST RET ${k+1}</div>
+      ${RK({path:`c.ret.${k}.studio`,label:'STUDIO',min:0,max:10,sm:true,tip:'retStudio',aria:'Stereo return '+(k+1)+' studio send',fmt:'rtdb',color:'#e9e6df'})}
+      <div class="row">${btn(`data-ret="${k}" data-k="fba" data-tip="retFba"`,'FB A')}${btn(`data-ret="${k}" data-k="fbb" data-tip="retFba"`,'FB B')}</div>
+      <div class="row">${btn(`data-ret="${k}" data-k="rec" data-tip="retRec"`,'REC','red')}${btn(`data-ret="${k}" data-k="mix" data-tip="retMix"`,'MIX','green')}</div>
+      ${RK({path:`c.ret.${k}.lvl`,label:'LEVEL',min:0,max:10,sm:true,tip:'retLvl',aria:'Stereo return '+(k+1)+' level',fmt:'rtdb',color:'#e9e6df'})}</div>`;
+  const dynU=u=>{ const p=`c.dyn.${u}`; return `<div class="pnl dynu" data-tip="dynUnit" data-label="Dynamics ${u+1}"><div class="pnl-t">DYNAMICS ${u+1} <span class="dyn-ch" id="dyn-ch-${u}"></span></div>
+      <div class="kb">${RK({path:p+'.ratio',label:'RATIO',min:1,max:20,step:0.5,sm:true,fmt:'ratio',tip:'dynUnit',aria:'Dynamics '+(u+1)+' ratio',color:'#2f6fa3'})}${pb(p+'.pk','PK','amber','dynPk')}</div>
+      <div class="kb">${pb(p+'.fast','FST ATK','amber','dynFast')}${RK({path:p+'.thr',label:'THRESHOLD',min:-20,max:10,sm:true,fmt:'db',tip:'dynUnit',aria:'Dynamics '+(u+1)+' threshold',color:'#2f6fa3'})}</div>
+      <div class="kb">${RK({path:p+'.rel',label:'RELEASE',min:0.1,max:4,step:0.1,sm:true,fmt:'s',tip:'dynUnit',aria:'Dynamics '+(u+1)+' release',color:'#2f6fa3'})}<div class="grleds" id="grl-${u}" aria-label="Gain reduction">${[20,14,10,6,3].map(g=>`<span data-g="${g}"><i></i>${g}</span>`).join('')}</div></div>
+      <div class="gate-note">GATE / EXP not simulated</div>
+      <div class="row">${pb(p+'.in','IN','green','dynIn')}</div></div>`; };
+  return `<div class="centre">
+    <div class="ccol">
+      <div class="pnl"><div class="pnl-t">OSCILLATOR</div>
+        <div class="kb">${lvk('c.osc.lvl','LEVEL','oscLvl','#e9e6df')}${btn('data-cycle="c.osc.freq" data-vals="48,100,400,1K,10K,15K" data-prefix="FREQ " data-suffix="" data-tip="oscFreq"','FREQ 1K')}</div>
+        <div class="row">${pb('c.osc.on','OSC ON','red','oscOn')}${pb('c.osc.pink','PINK ON','green','oscOn')}</div>
+        <div class="row">${pb('c.osc.trk','TRACK','amber','oscRoute')}${pb('c.osc.rec','REC','red','oscRoute')}${pb('c.osc.mix','MIX','green','oscRoute')}</div></div>
+      <div class="pnl"><div class="pnl-t">TALKBACK</div>
+        <div class="kb">${lvk('c.tb.lvl','TB TO F/B','tbLvl','#2b2b2b')}<div class="col">${pb('c.tb.all','TB ALL','amber','tb')}${pb('c.tb.fba','F/B A','amber','tb')}${pb('c.tb.fbb','F/B B','amber','tb')}</div></div></div>
+      <div class="pnl"><div class="pnl-t">MONITOR</div>
+        <div class="row">${c('mon','mix','MIX')}${c('mon','rec','REC')}${c('mon','trk','TRK')}</div>
+        <div class="row">${c('mon','exta','EXT A')}${c('mon','extb','EXT B')}</div>
+        <div class="kb">${RK({path:'c.monLvl',label:'MONITOR LEVEL',min:0,max:10,tip:'monLvl',fmt:'lvdb',aria:'Monitor level',color:'#2f6fa3'})}<div class="col">${c('dim',1,'DIM','yellow')}${c('mcut',1,'CUT','red')}${c('mono',1,'MONO')}</div></div>
+        <div class="row"><span class="sub-l">SOLO</span>${c('soloMode','pfl','PFL','yellow')}${c('soloMode','afl','AFL','yellow')}</div>
+        <div class="row">${btn('data-mflip="1" data-tip="mflip"','MASTER FLIP','blue')}</div></div>
+    </div>
+    <div class="ccol wide">
+      <div class="crow">
+        <div class="pnl" data-tip="bc" data-label="Bus compressor"><div class="pnl-t">COMPRESSOR</div>
+          <div class="bcgr">${grSVG('bcn')}</div>
+          <div class="kb">${RK({path:'c.bc.thr',label:'THRESH',min:-30,max:0,sm:true,tip:'bcThr',fmt:'db',color:'#2f6fa3',aria:'Bus compressor threshold'})}${RK({path:'c.bc.mk',label:'MAKE‑UP',min:0,max:15,sm:true,tip:'bcMk',fmt:'db',color:'#2f6fa3',aria:'Bus compressor make-up'})}</div>
+          <div class="row">${btn('data-cycle="c.bc.ratio" data-vals="2,4,10" data-prefix="" data-suffix=":1" data-tip="bcRatio"','4:1')}${btn('data-cycle="c.bc.att" data-vals="0.1,0.3,1,3,10,30" data-prefix="ATT " data-suffix="" data-tip="bcAtt"','ATT 30')}</div>
+          <div class="row">${btn('data-cycle="c.bc.rel" data-vals="0.1,0.3,0.6,1.2,auto" data-prefix="REL " data-suffix="" data-tip="bcRel"','REL AUTO')}${c('mixComp',1,'IN','green','mixComp')}</div></div>
+        ${dynU(0)}${dynU(1)}
+        <div class="pnl"><div class="pnl-t">TRACK BUS MASTERS</div><div class="mgrid two">${[0,1,2,3,4,5,6,7].map(k=>master('c.trkM.'+k,'BUS '+(k+1),'trkM')).join('')}</div></div>
+        <div class="pnl"><div class="pnl-t">CUE / FX MASTERS</div><div class="mgrid one">${master('c.cueA','ST CUE A','cueM')}${master('c.cueB','ST CUE B','cueM')}${master('c.fx.0','FX 1','fxM')}${master('c.fx.1','FX 2','fxM')}${master('c.fx.2','FX 3','fxM')}${master('c.fx.3','FX 4','fxM')}</div></div>
+      </div>
+      <div class="crow">${fbk('fbA','A')}${fbk('fbB','B')}${[0,1,2,3].map(ret).join('')}</div>
+    </div>
+  </div>`;
+}
+// one master fader that controls the REC or MIX bus, picked in REC/MIX bus functions (as on the AWS)
+function masterHTML(){
+  return `<div class="strip master">
+    <div class="strip-head"><div class="num">REC / MIX</div><div class="note" style="font-size:11px">bus functions</div></div>
+    <div class="sec"><div class="sec-l">Fader controls</div>
+      <div class="row">${btn('data-c="mfSel" data-v="rec" data-tip="mfSel"','REC','red')}${btn('data-c="mfSel" data-v="mix" data-tip="mfSel"','MIX','green')}</div>
+      <div class="sec-l">Bus inserts</div><div class="row">${btn('data-c="recIns" data-v="1" data-tip="recIns"','REC INS','green')}${btn('data-c="mixIns" data-v="1" data-tip="mixIns"','MIX INS','green')}</div>
+      <div class="mfvals"><span>REC <b id="mfv-rec"></b></span><span>MIX <b id="mfv-mix"></b></span></div></div>
+    <div class="grow"></div>
+    <div class="sec"><div class="mfdr"><span class="fl" id="mfl">REC</span>
+      <div class="fader-wrap" data-tip="master" id="mfw" data-label="Master fader">
+        <div class="meter"><i id="mfL"></i></div><div class="meter"><i id="mfR"></i></div>
+        <input class="fader" type="range" id="mf" min="0" max="100" step="1" data-path="c.recMaster" aria-label="Master fader">
+      </div><div class="fader-db" id="mfdb" style="width:auto"></div></div></div></div>`;
+}
+con.innerHTML=CHS.map(stripHTML).join('')+centreHTML()+masterHTML();
+
+// EQ panel
+const band=(t,color,inner)=>`<div class="band" style="--bc:${color}"><div class="band-t">${t}</div>${inner}</div>`;
+const ek=(ck,label,min,max,o={})=>RK(Object.assign({ck,label,min,max,tip:'eqKnob',aria:label},o));
+$('eqbands').innerHTML=
+  band('HPF','var(--k-hpf)',ek('hpfF','FREQ',20,350,{log:1,fmt:'hz',color:'var(--k-hpf)'})+btn('data-ck="hpf" data-tip="hpf"','IN','green'))+
+  band('LF','var(--k-lf)',ek('lfG','GAIN',-15,15,{fmt:'db',color:'var(--k-lf)'})+ek('lfF','FREQ',30,450,{log:1,fmt:'hz',color:'var(--k-lf)'})+btn('data-ck="lfBell" data-tip="bell"','BELL'))+
+  band('LMF','var(--k-lmf)',ek('lmfG','GAIN',-15,15,{fmt:'db',color:'var(--k-lmf)'})+ek('lmfF','FREQ',200,2500,{log:1,fmt:'hz',color:'var(--k-lmf)'})+ek('lmfQ','Q',0.5,3,{step:0.1,fmt:'q',color:'var(--k-lmf)'}))+
+  band('HMF','var(--k-hmf)',ek('hmfG','GAIN',-15,15,{fmt:'db',color:'var(--k-hmf)'})+ek('hmfF','FREQ',600,7000,{log:1,fmt:'hz',color:'var(--k-hmf)'})+ek('hmfQ','Q',0.5,3,{step:0.1,fmt:'q',color:'var(--k-hmf)'}))+
+  band('HF','var(--k-hf)',ek('hfG','GAIN',-15,15,{fmt:'db',color:'var(--k-hf)'})+ek('hfF','FREQ',1500,16000,{log:1,fmt:'hz',color:'var(--k-hf)'})+btn('data-ck="hfBell" data-tip="bell"','BELL'));
+function eqSpecs(c){ const s=[];
+  if(c.hpf) s.push({type:'highpass',f:c.hpfF,q:0.707,g:0});
+  s.push({type:c.lfBell?'peaking':'lowshelf',f:c.lfF,g:c.lfG,q:0.9});
+  s.push({type:'peaking',f:c.lmfF,g:c.lmfG,q:c.lmfQ}); s.push({type:'peaking',f:c.hmfF,g:c.hmfG,q:c.hmfQ});
+  s.push({type:c.hfBell?'peaking':'highshelf',f:c.hfF,g:c.hfG,q:0.9}); return s; }
+let OAC=null;
+function drawEQ(){
+  const c=S.ch[S.sel]; $('eq-title').textContent=`Channel ${S.sel+1} EQ`;
+  const W=620,H=220,L=34,Rr=8,T=10,Bt=24, N=180, fr=new Float32Array(N); for(let i=0;i<N;i++) fr[i]=20*Math.pow(1000,i/(N-1));
+  const tot=new Float32Array(N);
+  if(c.eq){ try{ if(!OAC) OAC=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1,128,44100);
+    eqSpecs(c).forEach(b=>{ const f=OAC.createBiquadFilter(); f.type=b.type; f.frequency.value=b.f; f.gain.value=b.g; f.Q.value=b.q; const mag=new Float32Array(N), ph=new Float32Array(N); f.getFrequencyResponse(fr,mag,ph); for(let i=0;i<N;i++) tot[i]+=20*Math.log10(Math.max(mag[i],1e-4)); }); }catch(e){} }
+  const x=f=>L+(Math.log10(f/20)/3)*(W-L-Rr), y=d=>T+(H-T-Bt)/2-Math.max(-20,Math.min(20,d))*((H-T-Bt)/40);
+  let g='';
+  [50,100,200,500,1000,2000,5000,10000].forEach(f=>{ g+=`<line class="grid" x1="${x(f)}" x2="${x(f)}" y1="${T}" y2="${H-Bt}"/><text x="${x(f)}" y="${H-8}" text-anchor="middle">${f>=1000?f/1000+'k':f}</text>`; });
+  [-20,-10,0,10,20].forEach(d=>{ g+=`<line class="${d===0?'zero':'grid'}" x1="${L}" x2="${W-Rr}" y1="${y(d)}" y2="${y(d)}"/><text x="${L-6}" y="${y(d)+3}" text-anchor="end">${d>0?'+'+d:d}</text>`; });
+  let pth=''; for(let i=0;i<N;i++) pth+=(i?'L':'M')+x(fr[i]).toFixed(1)+' '+y(tot[i]).toFixed(1);
+  g+=`<path class="area" d="${pth} L${x(20000)} ${y(0)} L${x(20)} ${y(0)} Z"/><path class="curve" d="${pth}"/>`;
+  if(!c.eq) g+=`<text x="${W/2}" y="${T+20}" text-anchor="middle">EQ OUT: flat</text>`;
+  $('eqcurve').innerHTML=g;
+}
+
+function setPatchTo(inId,fromId){
+  S.patch=S.patch.filter(p=>p.to!==inId);
+  if(fromId && fromId!==PT[inId].normal) S.patch.push({from:fromId,to:inId});
+  if(fromId===PT[inId].normal && PT[inId].full) S.patch=S.patch.filter(p=>p.from!==fromId);
+}
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-goto]'); if(go){ showView(go.dataset.goto); window.scrollTo({top:0,behavior:'smooth'}); return; }
+  if(!e.target.closest('#console,#eqcard,.rackview,#hpamp')) return;
+  const st=e.target.closest('[data-strip]'); if(st) S.sel=+st.dataset.strip;
+  const b=e.target.closest('button'); if(!b){ render(); return; }
+  const d=b.dataset;
+  if(d.eqopen!==undefined){ S.sel=+d.eqopen; render(); $('eqcard').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if(d.ck){ const c=S.ch[S.sel]; c[d.ck]=!c[d.ck]; if(d.ck==='dynIP'&&c.dynIP) c.dynOP=false; if(d.ck==='dynOP'&&c.dynOP) c.dynIP=false; }
+  else if(d.path){ setP(d.path,!getP(d.path)); }
+  else if(d.cycle){ const vals=d.vals.split(','), v=getP(d.cycle); setP(d.cycle,vals[(vals.indexOf(v)+1)%vals.length]); }
+  else if(d.trk){ const c=S.ch[d.ch], n=+d.trk; c.trk=c.trk.includes(n)?c.trk.filter(x=>x!==n):[...c.trk,n]; }
+  else if(d.dynu){ const c=S.ch[d.ch], u=+d.dynu; if(c.dyn===u) c.dyn=0; else { S.ch.forEach(o=>{ if(o.dyn===u) o.dyn=0; }); c.dyn=u; } }
+  else if(d.ch!==undefined && d.k==='sel'){ S.sel=+d.ch; }
+  else if(d.ch!==undefined && (d.k==='dirPre'||d.k==='dirEfx')){ const c=S.ch[d.ch], v=d.k==='dirPre'?'pre':'efx'; c.direct=c.direct===v?'post':v; }
+  else if(d.ch!==undefined){ const c=S.ch[d.ch]; c[d.k]=!c[d.k]; if(d.k==='dynIP'&&c.dynIP) c.dynOP=false; if(d.k==='dynOP'&&c.dynOP) c.dynIP=false; }
+  else if(d.mflip){ const on=!S.ch.every(c=>c.flip); S.ch.forEach(c=>c.flip=on); }
+  else if(d.c){ const C=S.c; if(d.c==='mon'||d.c==='soloMode'||d.c==='mfSel') C[d.c]=d.v; else C[d.c]=!C[d.c]; }
+  else if(d.ret!==undefined){ const r=S.c.ret[d.ret]; r[d.k]=!r[d.k]; }
+  render();
+});
+con.addEventListener('input',e=>{
+  const d=e.target.dataset, v=+e.target.value;
+  if(e.target.tagName==='SELECT'){ const inId=(d.k==='micSel'?'mic':'line')+(+d.ch+1); setPatchTo(inId,e.target.value||null);
+    if(!e.target.value) S.patch.push({from:'__none',to:inId}); S.sel=+d.ch; }
+  else if(d.path) setP(d.path,v);
+  else if(d.ch!==undefined){ S.ch[d.ch][d.k]=v; S.sel=+d.ch; }
+  render();
+});
+
+// ================= render =================
+const KEYS=['phantom','pad','inst','phase','flip','imute','dynIP','dynOP','insPre','ins','eq','hpf','cueOn','cuePost','cueB','cueEfx','fx1On','fx1to3','fx1Efx','fx2On','fx2to4','fx2Efx','rec','mix','trkPan','trkPre','trkCue','cut','solo'];
+function setOn(sel,on){ document.querySelectorAll(sel).forEach(b=>b.classList.toggle('on',!!on)); }
+const fmtL=L=>(L>0?'+':L<0?'−':'')+Math.abs(L)+' dB';
+let LAST=null;
+function render(){
+  const R=LAST=evalAll();
+  if(A.rec) A.rec.tr.forEach((k,i)=>A.rec.sigs[i]=union(A.rec.sigs[i],R.D.dawTr[k].inS));
+  S.ch.forEach((c,i)=>{
+    const r=R.chans[i];
+    KEYS.forEach(k=>setOn(`[data-ch="${i}"][data-k="${k}"]`,c[k]));
+    for(let n=1;n<=8;n++) setOn(`[data-ch="${i}"][data-trk="${n}"]`,c.trk.includes(n));
+    setOn(`[data-ch="${i}"][data-k="dirPre"]`,c.direct==='pre'); setOn(`[data-ch="${i}"][data-k="dirEfx"]`,c.direct==='efx');
+    ['cue','fx1','fx2','gain','trim'].forEach(k=>{ $(`k-${k}-${i}`).value=c[k]; $(`o-${k}-${i}`).textContent=(k==='gain'||k==='trim')?c[k]:(c[k]<=0?'−∞':FMT.db(Math.round(20*Math.log10(c[k]/10)))); });
+    $(`k-cuePan-${i}`).value=c.cuePan; $(`o-cuePan-${i}`).textContent=c.cuePan===0?'C':(c.cuePan<0?'L'+(-c.cuePan):'R'+c.cuePan);
+    setOn(`[data-ch="${i}"][data-k="sel"]`,S.sel===i); [1,2].forEach(u=>setOn(`[data-ch="${i}"][data-dynu="${u}"]`,c.dyn===u));
+    const sel=$(`ms-${i}`); for(let n=1;n<=8;n++){ const m=mlInfo(n); sel.options[n].textContent=n+': '+(m?m.name:'(empty)'); }
+    const ms=srcOf('mic'+(i+1));
+    $(`ms-${i}`).value=!ms?'':(/^ml/.test(ms)?ms:'other');
+    $(`pan-${i}`).value=c.pan; $(`o-pan-${i}`).textContent=c.pan===0?'C':(c.pan<0?'L'+(-c.pan):'R'+c.pan);
+    $(`f-${i}`).value=c.fader; $(`db-${i}`).textContent=dB(c.fader);
+    if(!A.on) $(`m-${i}`).style.height=r.post.length?(30+c.fader*0.6)+'%':'0';
+    const L=r.chLvl, lv=$(`lv-${i}`);
+    if(L===null||!r.chIn.length){ lv.className='lvl'; lv.textContent='IN  no signal'; }
+    else { lv.className='lvl '+(L>12?'clip':(L>=-6&&L<=6?'ok':'lo')); lv.textContent=(L>12?'CLIP ':'IN ')+fmtL(L); }
+    $(`warn-${i}`).textContent=r.warn;
+    con.querySelector(`[data-strip="${i}"]`).classList.toggle('sel',S.sel===i);
+  });
+  const C=S.c;
+  { const key=C.mfSel==='mix'?'master':'recMaster', el=$('mf');
+    el.dataset.path='c.'+key; el.value=C[key]; $('mfdb').textContent=dB(C[key]); $('mfl').textContent=C.mfSel==='mix'?'MIX':'REC';
+    $('mfw').dataset.tip=key==='master'?'master':'recMaster'; $('mfw').dataset.label=key==='master'?'MIX master':'REC master';
+    $('mfv-rec').textContent=dB(C.recMaster); $('mfv-mix').textContent=dB(C.master);
+    if(!A.on){ const h=(key==='master'?R.F.mixo:R.F.reco).sigs.length?(30+C[key]*0.6)+'%':'0'; $('mfL').style.height=h; $('mfR').style.height=h; } }
+  ['rec','mix'].forEach(v=>setOn(`[data-c="mfSel"][data-v="${v}"]`,C.mfSel===v));
+  [0,1].forEach(u=>{ const k=dynCh(u+1); $('dyn-ch-'+u).textContent=k<0?'not assigned':'on CH '+(k+1); });
+  setOn('[data-mflip]',S.ch.every(c=>c.flip));
+  ['mix','rec','trk','exta','extb'].forEach(v=>setOn(`[data-c="mon"][data-v="${v}"]`,C.mon===v));
+  ['pfl','afl'].forEach(v=>setOn(`[data-c="soloMode"][data-v="${v}"]`,C.soloMode===v));
+  ['dim','mono','mcut','mixComp','mixIns','recIns'].forEach(k=>setOn(`[data-c="${k}"]`,C[k]));
+  document.querySelectorAll('button[data-path]').forEach(b=>b.classList.toggle('on',!!getP(b.dataset.path)));
+  document.querySelectorAll('button[data-cycle]').forEach(b=>{ const v=getP(b.dataset.cycle); b.textContent=b.dataset.prefix+v.toUpperCase()+(b.dataset.suffix||''); b.classList.toggle('on',v!=='off'&&b.dataset.suffix===undefined); });
+  document.querySelectorAll('button[data-ck]').forEach(b=>b.classList.toggle('on',!!S.ch[S.sel][b.dataset.ck]));
+  C.ret.forEach((r,k)=>['mix','rec','fba','fbb'].forEach(x=>setOn(`[data-ret="${k}"][data-k="${x}"]`,r[x])));
+  $('loopwarn').hidden=!R.loop;
+  examTrack(R);
+  drawKnobs(); drawEQ(); drawSchem(R); drawOuts(R); drawEx(R); drawBay(R); drawDAW(R); drawRack(R); drawRoom(R); drawBridge(R); drawExam();
+  if(A.ctx) rewire(R);
+}
+
+// ================= schematic =================
+const svg=$('schem');
+function drawSchem(R){
+  const i=S.sel, c=S.ch[i], r=R.chans[i];
+  $('schem-title').textContent=`Channel ${i+1} schematic`;
+  let g='';
+  const wire=(d,live,off)=>`<path d="${d}" class="${off?'w-off':live?'w-live':'w-dead'}"/>`;
+  const block=(x,y,w,h,title,sub,cls)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" class="blk ${cls}"/><text x="${x+w/2}" y="${y+h/2-2}" text-anchor="middle" class="t-main">${title}</text><text x="${x+w/2}" y="${y+h/2+13}" text-anchor="middle" class="t-sub">${sub}</text>`;
+  const micOk=r.micLvl!==null, lineOk=r.lineLvl!==null;
+  const mName=r.micFeed.sigs.map(s=>s.name).join(', ')||'nothing patched';
+  const lName=r.lineFeed.sigs.map(s=>s.name).join(', ')||'nothing playing';
+  g+=block(16,22,118,50,'MIC AMP +'+c.gain+(c.pad?' −20':''),mName+(c.phantom?' · 48V':''), micOk?(r.micLvl>12?'stop':'live'):(r.warn&&r.micFeed.sigs.length?'stop':''));
+  g+=block(16,96,118,50,'LINE AMP '+fmtL(c.trim).replace(' dB',''),lName.length>22?lName.slice(0,21)+'…':lName, lineOk?'live':'');
+  g+=block(160,46,74,76,'FLIP',c.flip?'line → ch':'mic → ch','');
+  g+=wire('M134 47 H147 V'+(c.flip?100:68)+' H160',micOk);
+  g+=wire('M134 121 H147 V'+(c.flip?68:100)+' H160',lineOk);
+  const eqSub=!c.eq?'out':[c.hpf&&'HPF',c.lfG&&'LF',c.lmfG&&'LMF',c.hmfG&&'HMF',c.hfG&&'HF'].filter(Boolean).join(' ')||'in, flat';
+  const dynB={t:'DYN '+(c.dyn||''),s:!c.dyn?'not assigned':!S.c.dyn[c.dyn-1].in?'unit out':(c.dynIP?'IP':c.dynOP?'OP':'in'),byp:!dynOn(c)}, insB={t:'INSERT',s:c.ins?'INS in':'out',byp:!c.ins}, eqB={t:'EQ',s:eqSub,byp:!c.eq};
+  const proc=procOrder(c).map(p=>p==='dyn'?dynB:p==='eq'?eqB:insB);
+  const chain=[{t:'Ø',s:c.phase?'reversed':'normal',byp:!c.phase},{t:'INPUT MUTE',s:c.imute?'muted':'open',stop:c.imute},...proc,
+    {t:'FADER',s:c.cut?'CUT':dB(c.fader)+' dB',stop:c.cut||c.fader===0,fader:true},{t:'PAN',s:c.pan===0?'centre':(c.pan<0?'left':'right')}];
+  const X0=262, STEP=100, W=84, Y=58, H=52, MID=Y+H/2;
+  g+=wire(`M234 84 H${X0}`,r.chIn.length>0);
+  let sig=r.chIn.length>0, preX=0;
+  chain.forEach((b,k)=>{
+    const x=X0+k*STEP; if(b.fader) preX=x-8;
+    const live=sig&&!b.stop;
+    g+=block(x,Y,W,H,b.t,b.s,b.stop&&sig?'stop':(live?(b.byp?'live byp':'live'):(b.byp?'byp':'')));
+    sig=live; if(k<chain.length-1) g+=wire(`M${x+W} ${MID} H${x+STEP}`,sig);
+  });
+  const lastX=X0+(chain.length-1)*STEP+W, postX=lastX+14;
+  g+=wire(`M${lastX} ${MID} H${postX}`,r.post.length>0);
+  const RP=184,RQ=204,RA=224, has={pre:r.pre.length>0,post:r.post.length>0,alt:r.alt.length>0};
+  g+=wire(`M${preX} ${MID} V${RP}`,has.pre)+`<circle cx="${preX}" cy="${MID}" r="4" class="dot ${has.pre?'':'dead'}"/>`;
+  g+=wire(`M${postX} ${MID} V${RQ}`,has.post);
+  g+=wire(`M197 122 V${RA}`,has.alt);
+  g+=wire(`M16 ${RP} H1044`,has.pre)+wire(`M16 ${RQ} H1044`,has.post)+wire(`M16 ${RA} H1044`,has.alt);
+  g+=`<text x="212" y="${RP-5}" class="t-rail">PRE‑FADER</text><text x="212" y="${RQ-5}" class="t-rail">POST‑FADER</text><text x="212" y="${RA-5}" class="t-rail">ALTERNATE INPUT (EFX)</text><text x="${preX}" y="${Y-8}" text-anchor="middle" class="t-rail">PRE TAP</text>`;
+  const railY={pre:RP,post:RQ,alt:RA};
+  const dests=[
+    {t:'REC BUS',on:c.rec,from:'post',s:c.rec?'post':'off'},
+    {t:'MIX BUS',on:c.mix,from:'post',s:c.mix?'post':'off'},
+    {t:'TRACK BUS',on:c.trk.length>0&&(!c.trkCue||(c.cueOn&&c.cue>0)),from:c.trkCue?(c.cueEfx?'alt':(c.cuePost?'post':'pre')):(c.trkPre?'pre':'post'),s:c.trk.length?[...c.trk].sort().join(',')+(c.trkPan?' · pan':'')+' · '+(c.trkCue?'via cue · '+(c.cueEfx?'efx':c.cuePost?'post':'pre'):(c.trkPre?'pre':'post')):'none'},
+    {t:c.trkCue?'CUE → TRK':'CUE '+(c.cueB?'B':'A'),on:c.cueOn&&c.cue>0,from:c.cueEfx?'alt':(c.cuePost?'post':'pre'),s:!c.cueOn?'send off':'lvl '+c.cue+' · '+(c.cueEfx?'efx':c.cuePost?'post':'pre')},
+    {t:'FX '+(c.fx1to3?3:1),on:c.fx1On&&c.fx1>0,from:c.fx1Efx?'alt':'post',s:!c.fx1On?'send off':'lvl '+c.fx1+' · '+(c.fx1Efx?'efx':'post')},
+    {t:'FX '+(c.fx2to4?4:2),on:c.fx2On&&c.fx2>0,from:c.fx2Efx?'alt':'post',s:!c.fx2On?'send off':'lvl '+c.fx2+' · '+(c.fx2Efx?'efx':'post')},
+    {t:'DIRECT OUT',on:true,from:c.direct==='efx'?'alt':c.direct,s:c.direct},
+    {t:'SOLO '+S.c.soloMode.toUpperCase(),on:c.solo,from:S.c.soloMode==='pfl'?'pre':'post',s:c.solo?'soloed':'not soloed'},
+  ];
+  dests.forEach((d,k)=>{
+    const x=16+k*129, w=118, cx=x+w/2, y=258, live=d.on&&has[d.from];
+    g+=wire(`M${cx} ${railY[d.from]} V${y}`,live,!d.on)+`<circle cx="${cx}" cy="${railY[d.from]}" r="4" class="dot ${live?'':'dead'}"/>`;
+    g+=block(x,y,w,52,d.t,d.s,live?'live':(d.on?'':'byp'));
+  });
+  svg.innerHTML=g;
+}
+
+// ================= outputs =================
+function chips(list){ if(!list.length) return '<span class="empty">silent</span>';
+  return list.map(s=>`<span class="chip ${s.fx?'fx':''}" style="--c:${KCOL[s.k]||'var(--muted)'}">${s.name}</span>`).join(''); }
+function drawOuts(R){
+  const {D,F}=R, C=S.c;
+  const monNote=D.anySolo?(D.chSolo?'solo '+C.soloMode.toUpperCase():'')+(D.afls.length?(D.chSolo?' + ':'')+'AFL':''):(C.mcut?'speakers cut':'source: '+C.mon.toUpperCase())+(C.dim?' · dim':'')+(C.mono?' · mono':'');
+  const items=[['Speakers',monNote,D.mon],['Headphones A','via patchbay',D.pha],['Headphones B','via patchbay',D.phb],['Print recorder','stereo master',D.print],
+    ['REC out','stereo',F.reco.sigs],['Cue A','after master',F.cuea.sigs],['Cue B','after master',F.cueb.sigs]];
+  for(let k=1;k<=4;k++) items.push(['FX send '+k,'after master',F['fx'+k].sigs]);
+  D.dawi.forEach((l,k)=>items.push(['DAW input '+(k+1),S.daw.tr[k].arm?'armed':'not armed',l]));
+  for(let k=1;k<=NCH;k++) items.push(['Direct out '+k,S.ch[k-1].direct,F['dir'+k].sigs]);
+  $('outs').innerHTML=items.map(([t,s,l])=>`<div class="out ${l.length?'has':''}"><div class="out-t">${t}<small>${s}</small></div><div class="chips">${chips(l)}</div></div>`).join('');
+}
+
+// ================= exercises =================
+const has=(l,n)=>l.some(s=>s.name===n);
+const chOf=name=>R0=>R0.chans.findIndex(r=>r.micFeed.sigs.some(s=>s.name===name));
+const cable=(f,t)=>S.patch.some(p=>p.from===f&&p.to===t);
+const DAWSET=['Kick (DAW)','Snare (DAW)','Hi‑hat (DAW)','Overheads (DAW)','Bass (DAW)','Synth (DAW)'];
+const EX=[
+  {t:'Get the vocal into the speakers',p:'The vocal is a condenser mic on mic line 7, normalled to CH 7. The console starts zeroed, with nothing routed. Make the vocal audible on the speakers through the MIX bus.',
+   h:'On CH 7 turn on 48V and press MIX. Keep the channel fader and the MIX master fader up, the monitor source on MIX, the speaker LEVEL up and speaker CUT off.',
+   ok:R=>has(R.D.mon,'Vocal')&&S.c.mon==='mix'&&!R.D.anySolo},
+  {t:'Gain staging',p:'Get all eight input readouts between −6 and +6 dB, using GAIN, PAD and 48V, not the faders.',
+   h:'The four condenser mics (hi‑hat, overheads, vocal, room) need 48V before they show a level. Turn GAIN down on the hot DI channels (bass, synth) and up on the quiet ones.',
+   ok:R=>R.chans.every(r=>r.chLvl!==null&&r.chIn.length&&r.chLvl>=-6&&r.chLvl<=6)},
+  {t:'Shape the vocal EQ',p:'On the vocal channel, add a high‑pass filter at 100 Hz or above and cut some low‑mids (LMF at least −3 dB) to remove boxiness.',
+   h:'Click EQ KNOBS on CH 7. Make sure EQ IN and HPF IN are lit, set the HPF frequency to 100 Hz or more, and turn the LMF gain down to −3 dB or lower.',
+   ok:R=>{const v=chOf('Vocal')(R); if(v<0) return false; const c=S.ch[v]; return c.eq&&c.hpf&&c.hpfF>=100&&c.lmfG<=-3;}},
+  {t:'Record the vocal on DAW track 7',p:'CH 7\'s direct out is normalled to DAW input 7, post‑fader, so with the fader up the vocal is already at the DAW. Record one pass of the loop on track 7.',
+   h:'Keep the CH 7 fader up with DIR: POST. On the DAW tab press REC on track 7 to arm it; the input meter moves. Press ● RECORD and wait for the take to finish (about 10 seconds). Audio must be running.',
+   ok:R=>{const t=S.daw.tr[6].take; return !!t&&t.kind==='buf'&&has(t.sigs,'Vocal (DAW)');}},
+  {t:'Bass to the DAW, pre‑fader',p:'Feed the bass to DAW input 5 before the fader, so your monitor fader does not change the recording level.',
+   h:'On CH 5 press DIRECT PRE. The direct out is normalled to DAW in 5, so the bass now reaches the DAW even with the fader down.',
+   ok:R=>{const b=chOf('Bass')(R); return b>=0&&has(R.D.dawi[4],'Bass')&&S.ch[b].direct==='pre';}},
+  {t:'Add reverb to the vocal',p:'Send the vocal to the reverb and hear the reverb in the MIX bus.',
+   h:'On the vocal channel switch FX1 ON. FX send 1 is normalled to the reverb input, and the reverb output to echo return 1. Press MIX on RTN 1.',
+   ok:R=>has(R.F.mixo.sigs,'Reverb: Vocal')},
+  {t:'Set up the reverb',p:'On the Reverb tab, give the vocal a longer hall: decay of 3 s or more, pre‑delay of 30 ms or more, mix at 100%.',
+   h:'Open the Reverb tab. Turn DECAY up to 3.0 s, PRE‑DELAY to 30 ms, and check MIX shows 100% and BYPASS is off.',
+   ok:R=>S.rev.decay>=3&&S.rev.pre>=30&&S.rev.mix===100&&!S.rev.byp},
+  {t:'Headphone mix for the singer',p:'Headphones A should carry the vocal and the kick, unaffected by your faders, with no extra mix in it.',
+   h:'Switch CUE ON on the vocal and kick channels, keep POST and CUE B off. In the centre, keep ST CUE A up and press CUE A on F/B A. Leave its REC, MIX, EXT and CR MON buttons off.',
+   ok:R=>{const v=chOf('Vocal')(R),k=chOf('Kick')(R); if(v<0||k<0) return false; const ok=c=>c.cueOn&&c.cue>0&&!c.cuePost&&!c.cueEfx&&!c.cueB, f=S.c.fbA; return has(R.D.pha,'Vocal')&&has(R.D.pha,'Kick')&&ok(S.ch[v])&&ok(S.ch[k])&&f.cue&&!f.m1rec&&!f.m1ext&&!f.m2mix&&!f.m2ext&&!f.crmon;}},
+  {t:'Check the headphone feed',p:'Listen to foldback A on the control‑room speakers to check what the singer hears.',
+   h:'Press AFL on foldback A in the centre section. The speakers switch to the foldback A output until you release AFL.',
+   ok:R=>S.c.fbA.afl&&R.D.mon.length>0},
+  {t:'Outboard compressor on the snare',p:'Patch the outboard compressor into the snare channel\'s insert, before the EQ, at a ratio of 4:1 or more.',
+   h:'Patch CH 2 insert send to Comp 1 in, and Comp 1 out to CH 2 insert return. On CH 2 press INS and INSERT PRE, and route it to MIX. Set the ratio of COMP 1 on the Compressors tab.',
+   ok:R=>{const s=chOf('Snare')(R); return s>=0&&cable('is'+(s+1),'cpi')&&cable('cpo','ir'+(s+1))&&S.ch[s].ins&&S.ch[s].insPre&&has(R.F.mixo.sigs,'Snare')&&S.comp.ratio>=4&&!S.comp.byp;}},
+  {t:'Dynamics 1 on the kick, at the output',p:'Compress the kick with centre‑section Dynamics 1, placed at the channel output, at a ratio of 4:1 or more.',
+   h:'On the kick channel press DYNAMICS 1 and OP. In the centre, Dynamics 1 now reads CH 1: set RATIO to 4:1 or more, lower THRESHOLD until the LEDs light, and keep IN on.',
+   ok:R=>{const k=chOf('Kick')(R); if(k<0) return false; const c=S.ch[k], u=S.c.dyn[0]; return c.dyn===1&&c.dynOP&&u.in&&u.ratio>=4;}},
+  {t:'Check the kick before the fader',p:'Pull the kick fader all the way down, then hear the kick on its own in the speakers.',
+   h:'Kick fader to −∞, PFL mode, SOLO on the kick channel.',
+   ok:R=>{const k=chOf('Kick')(R); return k>=0&&S.ch[k].fader===0&&S.c.soloMode==='pfl'&&R.D.mon.length===1&&has(R.D.mon,'Kick');}},
+  {t:'Line‑up tone to the DAW',p:'Send the 1 kHz oscillator to DAW input 8 so you can check the recording level.',
+   h:'On the patchbay, patch Oscillator to DAW in 8. This breaks the normal from CH 8 direct out.',
+   ok:R=>has(R.D.dawi[7],'Oscillator 1 kHz')},
+  {t:'Record through the DAW, monitor on a free channel',p:'Record whatever is on wall box 1 into DAW track 1 (CH 1 direct out, normalled to DAW in 1), and monitor the DAW return on CH 4 through the MIX bus.',
+   h:'CH 1: set GAIN, fader up, MIX off. DAW: CLR track 1, input IN 1, output OUT 4, REC arm (or IN). Unplug wall box 4 on the Live room tab so CH 4 is free. CH 4: FLIP, MIX on. Press RECORD.',
+   ok:R=>{ const t=S.daw.tr[0].take, m=mlInfo(1); return !!m&&S.daw.tr[0].inp===1&&S.daw.tr[0].out===4&&S.ch[3].flip&&S.ch[3].mix&&!!t&&t.kind==='buf'&&has(t.sigs,m.name+' (DAW)'); }},
+  {t:'Mix the DAW playback',p:'Switch to mixdown: play the DAW and hear the six demo tracks coming back through channels 1–6 in the MIX bus.',
+   h:'Press PLAY on the DAW tab. Press MASTER FLIP so the channels take their line inputs (DAW outputs 1–8), and make sure MIX is on for channels 1–6.',
+   ok:R=>DAWSET.every(n=>has(R.F.mixo.sigs,n))},
+  {t:'Glue the mix with the bus compressor',p:'Put the bus compressor across the MIX bus with the classic drum‑bus setting: ratio 4:1, attack 30 ms, release AUTO.',
+   h:'In the centre section, Bus compressor: click the ratio button until it reads 4:1, ATT until 30, REL until AUTO, and press IN. Lower THRESH until the needle moves 2–4 dB with the mix playing.',
+   ok:R=>S.c.mixComp&&S.c.bc.ratio==='4'&&S.c.bc.att==='30'&&S.c.bc.rel==='auto'&&R.F.mixo.sigs.length>0},
+];
+function drawEx(R){
+  let done=0; const openNow=[...document.querySelectorAll('#ex details')].map(d=>d.open);
+  $('ex').innerHTML=EX.map((e,k)=>{ const ok=!!e.ok(R); if(ok) done++;
+    return `<div class="task ${ok?'done':''}"><div class="st">✓</div><h3>${k+1}. ${e.t}</h3><p>${e.p}</p><details${openNow[k]?' open':''}><summary>Hint</summary>${e.h}</details></div>`; }).join('');
+  $('prog').textContent=done+' / '+EX.length+' done';
+}
+
+// ================= exam (formative, scored per block 1 / 0.5 / 0) =================
+// Mirrors the tutor's MarkingSheet_Template: Q1-Q9, one row per block. Input X = channel 1, return channel = 5.
+const XC=0, RC=4, VOC='Vocal';
+const EXAM={on:false,best:{},tutor:{},fault:{},note:{},prev:null,ev:{},q7:false};
+function examState(){
+  const d=defaultState();
+  d.room=d.room.map((r,k)=>k===0?{src:'vocal',mic:'cond',plug:false}:{src:null,mic:r.mic,plug:false});
+  d.ch.forEach(c=>{ c.gain=15; c.fader=0; });
+  const C=d.c; C.recMaster=0; C.master=0; C.monLvl=0; C.cueA.lvl=0; C.cueB.lvl=0; C.fx.forEach(f=>f.lvl=0);
+  C.fbA.lvl=0; C.fbB.lvl=0; C.trkM.forEach(m=>m.lvl=0); C.ret.forEach(r=>r.lvl=0);
+  d.daw.tr.forEach(t=>{ t.take=null; }); d.hp={on:false,a:0,b:0,plugA:false,plugB:false};
+  return d;
+}
+// what "neutral" means for Q8: every console control back where the exam started
+const NEUTRAL=examState();
+function notNeutral(){
+  const out=[], n0=NEUTRAL.ch[0], C=S.c, N=NEUTRAL.c;
+  const chKeys=['phantom','flip','rec','mix','cueOn','fx1On','fx2On','ins','solo','cut','dynIP','dynOP','insPre','cuePost','cueB','cueEfx'];
+  S.ch.forEach((c,i)=>{ const bad=chKeys.filter(k=>c[k]!==n0[k]);
+    if(c.fader>0) bad.push('fader'); if(c.gain>n0.gain) bad.push('gain'); if(c.trk.length) bad.push('track bus'); if(c.dyn) bad.push('dynamics '+c.dyn); if(c.direct!=='post') bad.push('direct');
+    if(bad.length) out.push('CH '+(i+1)+': '+bad.join(', ')); });
+  if(C.recMaster>0) out.push('REC master'); if(C.master>0) out.push('MIX master'); if(C.monLvl>0) out.push('monitor level');
+  if(C.cueA.lvl>0||C.cueB.lvl>0) out.push('cue masters'); if(C.fx.some(f=>f.lvl>0)) out.push('FX masters'); if(C.trkM.some(m=>m.lvl>0)) out.push('track bus masters');
+  ['fbA','fbB'].forEach(f=>{ const x=C[f]; if(x.lvl>0||x.cue||x.m1rec||x.m1ext||x.m2mix||x.m2ext||x.crmon) out.push(f==='fbA'?'F/B A':'F/B B'); });
+  if(C.ret.some(r=>r.lvl>0||r.studio>0||r.mix||r.rec||r.fba||r.fbb)) out.push('stereo returns');
+  if(AFL_IDS.some(([p])=>getP('c.'+p).afl)) out.push('an AFL');
+  if(C.osc.on||C.osc.pink) out.push('oscillator'); if(C.tb.all||C.tb.fba||C.tb.fbb) out.push('talkback');
+  if(C.mixComp||C.mixIns||C.recIns||C.mcut||C.dim||C.mono) out.push('centre buttons');
+  if(realCables().length) out.push(realCables().length+' patch cable'+(realCables().length>1?'s':''));
+  return out;
+}
+const spk=()=>S.c.monLvl>0&&!S.c.mcut;
+const T='tutor';
+// each block: [q, name, fn(R) -> 1 | 0.5 | 0 | null(not yet) | 'tutor', live?]
+const EXB=[
+ ['Q1','Mic stand choice',()=>T],['Q1','Mic stand handling',()=>T],['Q1','Shockmount handling',()=>T],['Q1','Mic handling',()=>T],
+ ['Q1','XLR patched',()=>EXAM.fault.plug48?0:S.room[0].plug?1:null],
+ ['Q1','HP patched',()=>S.hp.plugA||S.hp.plugB?1:null],
+ ['Q1','HP amp on',()=>S.hp.on?1:null],
+ ['Q2','Mic input',R=>!S.ch[XC].flip&&has(R.chans[XC].chIn,VOC)?1:null],
+ ['Q2','Phantom power on',()=>EXAM.fault.p48late?0:S.ch[XC].phantom?1:null],
+ ['Q2','Meter CHIP',R=>R.chans[XC].chLvl!==null&&has(R.chans[XC].chIn,VOC)?1:null],
+ ['Q2','Preamp level',R=>{ if(EXAM.fault.clip) return 0; const L=R.chans[XC].chLvl; if(L===null||!has(R.chans[XC].chIn,VOC)) return null; return L>=-6&&L<=6?1:0.5; }],
+ ['Q2','Channel Path',R=>S.ch[XC].rec&&has(R.chans[XC].post,VOC)?1:null],
+ ['Q2','Fader',()=>{ const f=S.ch[XC].fader; return Math.abs(f-75)<=3?1:f>0?0.5:null; }],
+ ['Q2','Off-bus metering',R=>has(R.F.reco.sigs,VOC)?1:null],
+ ['Q3','New DAW Project',()=>T],['Q3','Mono audio track',()=>T],['Q3','Name',()=>T],
+ ['Q3','DAW metering',R=>R.D.dawTr.some((x,k)=>x.monOn&&has(x.inS,VOC))?1:null],
+ ['Q3','DAW output',()=>S.daw.tr.some(t=>t.inp===XC+1&&t.out===RC+1)?1:null],
+ ['Q3','Off-tape metering',R=>S.ch[RC].flip&&has(R.chans[RC].chIn,VOC)?1:null],
+ ['Q4','Mix bus allocation',R=>S.ch[RC].mix&&has(R.chans[RC].post,VOC)?1:S.ch[RC].rec&&has(R.chans[RC].post,VOC)?0:null],
+ ['Q4','Meter mix bus',R=>has(R.F.mixo.sigs,VOC)&&S.ch[RC].mix?1:null],
+ ['Q4','CRM source',()=>S.c.mon==='mix'&&S.ch[RC].mix?1:null],
+ ['Q4','CRM metering',R=>!R.D.anySolo&&S.c.mon==='mix'&&has(R.F.mixo.sigs,VOC)?1:null],
+ ['Q4','Monitoring',R=>spk()&&has(R.D.mon,VOC)&&S.c.mon==='mix'?1:null],
+ ['Q5','Stereo aux on',()=>S.ch[RC].cueOn?1:null],
+ ['Q5','Pre fader',()=>S.ch[RC].cueOn?(S.ch[RC].cuePost?0.5:1):null],
+ ['Q5','Sourced from monitor path',R=>has(R.F.cuea.sigs,VOC)?(S.ch[RC].cueOn&&!S.ch[XC].cueOn?1:0.5):null],
+ ['Q5','Cue send',R=>S.ch[RC].cueOn&&S.ch[RC].cue>0&&has(R.F.cuea.sigs,VOC)?(S.ch[RC].cueB?0.5:1):null],
+ ['Q5','Aux master raised',R=>S.c.cueA.lvl>0&&has(R.F.cuea.sigs,VOC)?1:null],
+ ['Q5','Aux metering',()=>EXAM.ev.cueMeter?1:null],
+ ['Q5','CRM source',()=>EXAM.ev.fbSolo?1:null],
+ ['Q5','CRM metering',()=>EXAM.ev.fbMeter?1:null],
+ ['Q5','HP levels up',R=>(S.hp.a>0&&has(R.D.pha,VOC))||(S.hp.b>0&&has(R.D.phb,VOC))?1:null],
+ ['Q5','Cue mix in cans',R=>has(R.D.pha,VOC)||has(R.D.phb,VOC)?1:null],
+ ['Q6','Create click',()=>S.daw.click.on?1:null],
+ ['Q6','Output to console',R=>{ const k=S.daw.click.out-1; return k!==XC&&k!==RC&&S.ch[k].flip&&has(R.chans[k].chIn,'Click')?1:null; }],
+ ['Q6','Send to cue mix',R=>{ const k=S.daw.click.out-1; if(!has(R.F.cuea.sigs,'Click')&&!has(R.F.cueb.sigs,'Click')) return null; return has(R.F.mixo.sigs,'Click')?0.5:1; }],
+ ['Q6','CRM metering',()=>EXAM.ev.clickMeter?1:null],
+ ['Q6','CRM monitoring',()=>EXAM.ev.clickHeard?1:null],
+ ['Q7','Recording',()=>S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,VOC+' (DAW)'))?1:null],
+ ['Q7','Off-tape monitoring',()=>EXAM.ev.offTapeRec?1:EXAM.ev.recOnRec?0.5:null],
+ ['Q8','Save and close DAW project',()=>T],
+ ['Q8','Mute speakers',()=>!EXAM.q7||EXAM.ev.p48offSpk===undefined?null:EXAM.ev.p48offSpk?0:1,1],
+ ['Q8','Phantom power off',()=>!EXAM.q7?null:EXAM.fault.unplug48?0:!S.ch[XC].phantom?1:null,1],
+ ['Q8','Neutralise',()=>{ if(!EXAM.q7) return null; const n=notNeutral().length; return n===0?1:n<=3?0.5:0; },1],
+ ['Q8','HP amp off',()=>EXAM.q7&&!S.hp.on?1:null,1],
+ ['Q9','Mic off stand first',()=>T],['Q9','Shockmount',()=>T],['Q9','Cables coiled',()=>T],
+ ['Q9','Headphones put away',()=>EXAM.q7&&!S.hp.plugA&&!S.hp.plugB?1:null,1],
+ ['All','General attitude',()=>T],
+];
+const QT={Q1:'Mic on a boom stand, patched to Input X; headphones for the musician',Q2:'Mic signal into the console and on to the DAW; meter off-bus',
+  Q3:'New DAW project, mono track; meter the input; return it to channel 5; meter off-tape',Q4:'Off-tape signal to the MIX bus; meter and monitor it',
+  Q5:'Stereo cue mix with the mic signal to the live room; meter and monitor it',Q6:'DAW click to the cue mix only; meter and monitor the cue',
+  Q7:'Record at least one pass while confidence monitoring',Q8:'Save and close; neutralise the console',Q9:'Pack up the live room',All:'Throughout'};
+function examTrack(R){
+  if(!EXAM.on) return;
+  const c=S.ch[XC], P=EXAM.prev||{}, ev=EXAM.ev, F=EXAM.fault;
+  if(c.phantom&&!P.ph&&c.gain>15&&S.room[0].plug) F.p48late=true;
+  if(S.room[0].plug&&!P.plug&&c.phantom) F.plug48=true;
+  if(!S.room[0].plug&&P.plug&&c.phantom) F.unplug48=true;
+  if(!c.phantom&&P.ph&&EXAM.q7) ev.p48offSpk=spk();
+  const L=R.chans[XC].chLvl; if(L!==null&&L>12&&!c.flip) F.clip=true;
+  if(S.c.cueA.afl&&has(R.F.cuea.sigs,VOC)) ev.cueMeter=true;
+  if(S.c.fbA.afl&&has(R.F.fba.sigs,VOC)||S.c.fbB.afl&&has(R.F.fbb.sigs,VOC)) { ev.fbSolo=true; if(has(R.D.solo,VOC)) ev.fbMeter=true; }
+  if(has(R.D.solo,'Click')&&(S.c.cueA.afl||S.c.cueB.afl||S.c.fbA.afl||S.c.fbB.afl)){ ev.clickMeter=true; if(spk()) ev.clickHeard=true; }
+  if(A.rec&&!A.rec.done){ if(S.c.mon==='mix'&&has(R.D.mon,VOC)&&!R.D.anySolo) ev.offTapeRec=true; else if(S.c.mon==='rec') ev.recOnRec=true; }
+  if(S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,VOC+' (DAW)'))) EXAM.q7=true;
+  EXAM.prev={ph:c.phantom,plug:S.room[0].plug};
+  EXB.forEach(([q,n,fn,live],k)=>{ const v=fn(R); if(v===T) return;
+    if(live) EXAM.best[k]=v; else if(v===0) EXAM.best[k]=0; else if(v!==null&&EXAM.best[k]!==0) EXAM.best[k]=Math.max(EXAM.best[k]??0,v); });
+}
+const WHY={'XLR patched':()=>EXAM.fault.plug48?'cable plugged in with 48V on':'', 'Phantom power on':()=>EXAM.fault.p48late?'48V switched on after the gain was raised':'',
+  'Preamp level':()=>EXAM.fault.clip?'preamp went into the red':'aim for −6 to +6 dB on the channel meter', 'Phantom power off':()=>EXAM.fault.unplug48?'mic unplugged with 48V on':'',
+  'Mute speakers':()=>EXAM.ev.p48offSpk?'fundamental error: speakers were still up when 48V went off':'speakers down or cut before switching 48V off',
+  'Neutralise':()=>EXAM.q7?(notNeutral().join(' · ')||'console neutral'):'scored after the recording (Q7)',
+  'Mix bus allocation':()=>'return channel 5 on MIX, not REC', 'Sourced from monitor path':()=>'cue from the return channel, not the live mic channel',
+  'Send to cue mix':()=>'click in the cue, not on the MIX bus', 'Off-tape monitoring':()=>'listen to the MIX bus while recording'};
+function drawExam(){
+  const bar=$('exambar'); bar.hidden=!EXAM.on;
+  let auto=0, tut=0, max=0, html='', cur='';
+  EXB.forEach(([q,n,fn],k)=>{ const isT=fn(LAST)===T, v=isT?EXAM.tutor[k]:EXAM.best[k];
+    max++; if(v!==undefined&&v!==null) (isT?tut+=v:auto+=v);
+    if(q!==cur){ if(cur) html+='</div>'; cur=q; html+=`<div class="exq"><h3><span>${q} · ${QT[q]}</span></h3>`; }
+    const cls=v===1?'s1':v===0.5?'s05':v===0?'s0':'', txt=v===undefined||v===null?(isT?'tutor':'—'):String(v);
+    const why=(WHY[n]?WHY[n]():'')||(isT?'marked by the tutor':'');
+    html+=`<div class="exr"><span>${n}</span>${isT?`<button class="sc ${cls}" data-exk="${k}" aria-label="Tutor mark for ${n}">${txt}</button>`:`<span class="sc ${cls}">${txt}</span>`}<span class="why">${why}</span></div>`; });
+  html+='</div>';
+  $('exTab').innerHTML=EXAM.on||Object.keys(EXAM.best).length?html:'';
+  const tot=auto+tut;
+  $('exTot').textContent=EXAM.on||Object.keys(EXAM.best).length?`Score ${tot} / ${max}  ·  simulator ${auto}  ·  tutor ${tut}`:'';
+  bar.innerHTML=`<span>Exam running · ${tot} / ${max}</span><button class="b amber" data-goto="exam">Open scoresheet</button>`;
+}
+$('exStart').addEventListener('click',()=>{ if(A.rec) A.rec=null; S=examState(); Object.assign(EXAM,{on:true,best:{},tutor:{},fault:{},ev:{},prev:null,q7:false}); render(); });
+$('exStop').addEventListener('click',()=>{ EXAM.on=false; render(); });
+$('exTab').addEventListener('click',e=>{ const b=e.target.closest('[data-exk]'); if(!b) return; const k=+b.dataset.exk, v=EXAM.tutor[k];
+  EXAM.tutor[k]=v===undefined?1:v===1?0.5:v===0.5?0:undefined; drawExam(); });
+
+// ================= patchbay =================
+const CABLE_COL=['#e0533d','#f0a531','#3fa45b','#3f7fd1','#c86fd0','#e8c832','#38b6b0','#ffffff'];
+const bay=$('bay'), cables=$('cables');
+let pending=null;
+function jackHTML(id,side){
+  if(!id) return `<button class="jack blank" tabindex="-1" aria-hidden="true"><span class="h"></span><span class="n">&nbsp;</span></button>`;
+  const p=PT[id];
+  return `<button class="jack" data-jack="${id}" aria-label="${p.label}"><span class="n">${side==='bot'?'':p.n}</span><span class="h"></span><span class="n">${side==='bot'?p.n:''}</span></button>`;
+}
+bay.insertAdjacentHTML('beforeend',BAY.map(row=>`<div class="bay-row">${row.map(g=>`<div class="grp"><div class="grp-l">${g.t}</div><div class="jacks">${g.cols.map(([tp,bt])=>`<div class="col">${jackHTML(tp,'top')}<div class="norm" data-norm="${bt||''}" data-top="${tp||''}"></div>${jackHTML(bt,'bot')}</div>`).join('')}</div><div class="grp-l">${g.b}</div></div>`).join('')}</div>`).join(''));
+const realCables=()=>S.patch.filter(p=>p.from!=='__none');
+function drawBay(R){
+  document.querySelectorAll('[data-norm]').forEach(el=>{
+    const id=el.dataset.norm, p=PT[id], top=el.dataset.top;
+    el.className='norm';
+    if(!p||!p.normal||p.normal!==top) el.classList.add('none');
+    else { if(p.full) el.classList.add('full'); if(normalBroken(id)) el.classList.add('broken'); }
+  });
+  document.querySelectorAll('.jack[data-jack]').forEach(j=>{ const id=j.dataset.jack, p=PT[id];
+    const f=p.io==='out'?R.F[id]:(srcOf(id)?R.F[srcOf(id)]:EMPTY);
+    j.classList.toggle('live',!!(f&&f.sigs.length)); j.classList.toggle('pending',pending===id); });
+  drawCables();
+  const rc=realCables();
+  $('plist').innerHTML=rc.length?rc.map((p,k)=>`<div class="pitem"><span><i style="background:${CABLE_COL[k%CABLE_COL.length]}"></i>${PT[p.from].label} → ${PT[p.to].label}</span><button data-pull="${p.to}">Pull</button></div>`).join(''):'<span class="empty">No cables. Every connection is running on its normal.</span>';
+}
+function drawCables(){
+  if($('view-patchbay').hidden) return;
+  const br=bay.getBoundingClientRect(); let g='';
+  realCables().forEach((p,k)=>{
+    const a=bay.querySelector(`[data-jack="${p.from}"] .h`), b=bay.querySelector(`[data-jack="${p.to}"] .h`); if(!a||!b) return;
+    const ra=a.getBoundingClientRect(), rb=b.getBoundingClientRect(), col=CABLE_COL[k%CABLE_COL.length];
+    const x1=ra.left+ra.width/2-br.left, y1=ra.top+ra.height/2-br.top, x2=rb.left+rb.width/2-br.left, y2=rb.top+rb.height/2-br.top;
+    const sag=40+Math.abs(x2-x1)*0.15+Math.abs(y2-y1)*0.2;
+    g+=`<path d="M${x1} ${y1} C${x1} ${y1+sag} ${x2} ${y2+sag} ${x2} ${y2}" stroke="${col}"/><circle cx="${x1}" cy="${y1}" r="6" fill="${col}"/><circle cx="${x2}" cy="${y2}" r="6" fill="${col}"/>`;
+  });
+  cables.setAttribute('width',bay.scrollWidth); cables.setAttribute('height',bay.scrollHeight); cables.innerHTML=g;
+}
+bay.addEventListener('click',e=>{
+  const j=e.target.closest('[data-jack]'); if(!j) return; const id=j.dataset.jack, p=PT[id];
+  if(p.io==='in' && !pending && S.patch.some(q=>q.to===id)){ S.patch=S.patch.filter(q=>q.to!==id); render(); return; }
+  if(!pending){ pending=id; render(); return; }
+  const a=PT[pending], from=a.io==='out'?pending:(p.io==='out'?id:null), to=a.io==='in'?pending:(p.io==='in'?id:null);
+  pending=null;
+  if(from&&to){ S.patch=S.patch.filter(q=>q.to!==to); S.patch.push({from,to}); }
+  else if(a.id!==id) pending=id;
+  render();
+});
+$('plist').addEventListener('click',e=>{ const b=e.target.closest('[data-pull]'); if(!b) return; S.patch=S.patch.filter(q=>q.to!==b.dataset.pull); render(); });
+$('clearp').addEventListener('click',()=>{ S.patch=[]; pending=null; render(); });
+function jackInfo(id){
+  const p=PT[id], R=LAST; let h=`<b>${p.label}</b> · ${p.io==='out'?'output (upper row)':'input (lower row)'}<br>${p.desc}<br>`;
+  if(p.io==='in'){ const s=srcOf(id); h+=p.normal?`Normalled from ${PT[p.normal].label}${p.full?' (full normal)':' (half normal)'}${normalBroken(id)?' · <b>normal broken</b>':''}.<br>`:'No normal.<br>';
+    h+=`Fed by: ${s?PT[s].label:'nothing'}<div class="chips">${chips(s?R.F[s].sigs:[])}</div>`; }
+  else { if(/^ml/.test(id)){ const m=mlInfo(+id.slice(2)); h+='Plugged in: <b>'+(m?m.name+' ('+m.desc+')':'nothing')+'</b><br>'; }
+    const norm=Object.values(PT).filter(q=>q.normal===id).map(q=>q.label); h+=(norm.length?'Normalled to '+norm.join(', ')+'.<br>':'')+`Carries:<div class="chips">${chips(R.F[id]?R.F[id].sigs:[])}</div>`; }
+  $('jackinfo').innerHTML=h;
+}
+document.addEventListener('mouseover',e=>{ showTip(e.target); const j=e.target.closest&&e.target.closest('[data-jack]'); if(j) jackInfo(j.dataset.jack); });
+document.addEventListener('focusin',e=>{ showTip(e.target); const j=e.target.closest&&e.target.closest('[data-jack]'); if(j) jackInfo(j.dataset.jack); });
+window.addEventListener('resize',drawCables);
+
+// ================= DAW =================
+const dawEl=$('daw');
+let dawMsg='';
+const outOpt=k=>`<option value="${k}">OUT ${k} → CH ${k} line</option>`;
+dawEl.innerHTML=`<div class="transport">
+    <button class="tp" data-dt="play" data-tip="dPlay" data-label="Play">▶ PLAY</button><button class="tp" data-dt="stop" data-tip="dStop" data-label="Stop">■ STOP</button><button class="tp" data-dt="rec" data-tip="dRec" data-label="Record">● RECORD</button>
+    <span class="clock" id="dclock">BAR 1 · BEAT 1</span><span class="dawstat" id="dawstat"></span>
+    <button class="b amber" data-dt="click" data-tip="dClick" data-label="Click track" style="flex:0 0 auto;padding:5px 10px">CLICK</button><label class="dclk" data-tip="dClick" data-label="Click output">to OUT <select id="dclickout" aria-label="Click output">${[1,2,3,4,5,6,7,8].map(o=>`<option value="${o}">${o}</option>`).join('')}</select></label>
+    <button class="tool" data-dt="demo" data-tip="dDemo" data-label="Load demo takes">Load demo takes</button><button class="tool" data-dt="clear" data-tip="dClear" data-label="Clear all takes">Clear all takes</button></div>
+  <div class="daw-scroll">
+    <div class="trk head"><span>Track · DAW input</span><span>Rec · In · Mute · Clear</span><span>Volume</span><span>Input (from desk)</span><span>Output (to desk)</span><div class="ruler">${[0,1,2,3].map(b=>`<span style="left:${b*25}%">${b+1}</span>`).join('')}</div></div>
+    ${CHS.map(k=>`<div class="trk" data-dtrow="${k}">
+      <div class="tname"><b id="dn-${k}"></b><span class="tin" id="dsrc-${k}"></span><div class="hm" data-tip="dArm" data-label="DAW input level"><i id="dm-${k}"></i></div></div>
+      <div class="row">${btn(`data-dtr="${k}" data-k="arm" data-tip="dArm"`,'REC','red')}${btn(`data-dtr="${k}" data-k="mon" data-tip="dMon"`,'IN','green')}${btn(`data-dtr="${k}" data-k="mute" data-tip="dMute"`,'M','yellow')}${btn(`data-dtr="${k}" data-k="clr" data-tip="dClr"`,'CLR','red')}</div>
+      <div class="tvol" data-tip="dVol" data-label="Track volume"><input type="range" min="0" max="100" step="1" id="dvol-${k}" data-dtr="${k}" data-k="vol" aria-label="Track ${k+1} volume"><output id="ddb-${k}"></output></div>
+      <div data-tip="dIn" data-label="Track input"><select id="din-${k}" data-dtr="${k}" data-k="inp" aria-label="Track ${k+1} input">${[...Array(8)].map((_,j)=>`<option value="${j+1}">IN ${j+1} ← CH ${j+1} direct</option>`).join('')}</select></div>
+      <div data-tip="dOut" data-label="Track output"><select id="dout-${k}" data-dtr="${k}" data-k="out" aria-label="Track ${k+1} output">${[...Array(8)].map((_,o)=>outOpt(o+1)).join('')}</select></div>
+      <div class="lane" id="dl-${k}"><div class="rgn"></div><i class="ph"></i></div>
+    </div>`).join('')}
+  </div>`;
+const STEMEV={
+  kick:s=>KICK.includes(s%16)?[2,1,0]:null, snare:s=>SNARE.includes(s%16)?[2,0.9,0]:null,
+  hat:s=>s%2===0?[s%16===14?2:1,s%4===0?0.6:0.4,0]:null,
+  oh:s=>s===0?[12,0.9,0]:(KICK.includes(s%16)||SNARE.includes(s%16))?[1,0.5,0]:s%2===0?[1,0.3,0]:null,
+  bass:s=>s%2===0?[1.8,0.7,1]:null, synth:s=>(s%16===0||s%16===8)?[7.5,0.55,1]:null,
+  vocal:s=>{ const m=MEL.find(x=>x[0]===s); return m?[m[2],0.75,1]:null; },
+  room:s=>(KICK.includes(s%16)||SNARE.includes(s%16))?[3,0.5,0]:s%2===0?[1,0.15,0]:null};
+function stemShape(k){ const N=256, a=new Float32Array(N), f=STEMEV[k]; if(!f) return a;
+  for(let s=0;s<64;s++){ const ev=f(s); if(!ev) continue; const [len,amp,sus]=ev, n=Math.round(len*4);
+    for(let j=0;j<n;j++){ const i=s*4+j; if(i>=N) break; const v=sus?amp*(j>n-2?0.4:0.9):amp*Math.exp(-3*j/n); if(v>a[i]) a[i]=v; } }
+  return a; }
+function peaksOf(d,N=256){ const a=new Float32Array(N), w=Math.floor(d.length/N); let mx=0;
+  for(let i=0;i<N;i++){ let p=0; for(let j=i*w;j<(i+1)*w;j++){ const v=Math.abs(d[j]); if(v>p) p=v; } a[i]=p; if(p>mx) mx=p; }
+  if(mx<0.004) return new Float32Array(N); for(let i=0;i<N;i++) a[i]=a[i]/mx; return Array.from(a,v=>+v.toFixed(3)); }
+function regionHTML(t){
+  if(!t) return '';
+  const a=t.kind==='stem'?stemShape(t.k):t.peaks, N=a.length, col=KCOL[(t.sigs[0]||{}).k]||'var(--muted)';
+  let top='', bot=''; for(let i=0;i<N;i++){ const x=(i/(N-1)*640).toFixed(1), h=Math.max(0.6,a[i]*19); top+=(i?'L':'M')+x+' '+(21-h).toFixed(1); bot='L'+x+' '+(21+h).toFixed(1)+bot; }
+  return `<div class="region" style="--c:${col}"><svg viewBox="0 0 640 42" preserveAspectRatio="none" aria-hidden="true"><path d="${top}${bot}Z"/></svg><span>${t.label}${t.kind==='stem'?' · demo take':' · recorded'}</span></div>`;
+}
+function drawDAW(R){
+  setOn('[data-dt="click"]',S.daw.click.on); $('dclickout').value=S.daw.click.out;
+  setOn('[data-dt="play"]',S.daw.play); setOn('[data-dt="rec"]',!!A.rec);
+  S.daw.tr.forEach((t,k)=>{
+    ['arm','mon','mute'].forEach(x=>setOn(`[data-dtr="${k}"][data-k="${x}"]`,t[x]));
+    $('dn-'+k).innerHTML=`<span>${k+1}</span>`+(t.take?t.take.label:'empty');
+    const inS=R.D.dawTr[k].inS, s=srcOf('dawi'+t.inp);
+    $('dsrc-'+k).textContent='IN '+t.inp+' ← '+(s?PT[s].label:'nothing')+(inS.length?': '+inS.map(x=>x.name).join(', '):'');
+    $('dvol-'+k).value=t.vol; $('ddb-'+k).textContent=dB(t.vol); $('dout-'+k).value=t.out; $('din-'+k).value=t.inp;
+    const lane=$('dl-'+k), sig=t.take?t.take.kind+t.take.ver+t.take.label:'none';
+    if(lane.dataset.sig!==sig){ lane.dataset.sig=sig; lane.querySelector('.rgn').innerHTML=regionHTML(t.take); }
+    lane.classList.toggle('arm',t.arm); lane.classList.toggle('rec',!!(A.rec&&A.rec.tr.includes(k))); lane.classList.toggle('dim',t.arm||t.mon||t.mute);
+    if(!A.on) $('dm-'+k).style.width=inS.length?'55%':'0';
+  });
+  const st=$('dawstat'); st.classList.toggle('rec',!!A.rec);
+  if(!A.rec) st.textContent=dawMsg||(S.daw.play?'Playing, locked to the band\'s loop.':'Stopped. Outputs carry only armed or IN tracks.');
+}
+async function dawPlay(){ if(!A.on) await setAudio(true); S.daw.play=true; dawMsg=''; }
+function dawStop(){ if(A.rec){ A.rec=null; dawMsg='Recording stopped. The take was discarded.'; } else dawMsg=''; S.daw.play=false; }
+async function dawRec(){
+  if(A.rec) return;
+  const armed=S.daw.tr.map((t,k)=>t.arm?k:-1).filter(k=>k>=0);
+  if(!armed.length){ dawMsg='Arm a track first: press REC on the track you want to record.'; return; }
+  if(!A.on) await setAudio(true);
+  S.daw.play=true; dawMsg='';
+  const len=Math.round(LOOP*A.ctx.sampleRate);
+  A.rec={tr:armed,ch:armed.map(k=>S.daw.tr[k].inp-1),len,bufs:armed.map(()=>new Float32Array(len)),count:0,sigs:armed.map(()=>[]),done:false};
+}
+function finishRec(){
+  const Rc=A.rec; if(!Rc) return; A.rec=null;
+  Rc.tr.forEach((k,i)=>{
+    const ab=A.ctx.createBuffer(1,Rc.len,A.ctx.sampleRate); ab.getChannelData(0).set(Rc.bufs[i]); A.takeBuf[k]=ab;
+    const sigs=Rc.sigs[i].map(s=>({name:/\(DAW\)$/.test(s.name)?s.name:s.name+' (DAW)',k:s.k,fx:s.fx}));
+    const t=S.daw.tr[k]; t.take={kind:'buf',sigs,label:Rc.sigs[i].length?Rc.sigs[i].map(s=>s.name.replace(/ \(DAW\)$/,'')).join(', '):'silence',ver:++TAKEV,peaks:peaksOf(Rc.bufs[i])}; t.arm=false;
+  });
+  dawMsg='Take recorded on track '+Rc.tr.map(k=>k+1).join(', ')+'. The track was disarmed so you hear the recording.';
+  render();
+}
+dawEl.addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b) return; const d=b.dataset;
+  if(d.dt==='click'){ S.daw.click.on=!S.daw.click.on; render(); return; }
+  if(d.dt==='play') await dawPlay(); else if(d.dt==='stop') dawStop(); else if(d.dt==='rec') await dawRec();
+  else if(d.dt==='clear'){ S.daw.tr.forEach(t=>t.take=null); A.takeBuf=[]; dawMsg='All takes cleared.'; }
+  else if(d.dt==='demo'){ S.daw.tr.forEach((t,k)=>{ if(DEMO[k]){ t.take=stemTake(DEMO[k]); A.takeBuf[k]=null; } }); dawMsg='Demo takes loaded on tracks 1–6.'; }
+  else if(d.dtr!==undefined&&d.k==='clr'){ if(A.rec&&A.rec.tr.includes(+d.dtr)) return; S.daw.tr[d.dtr].take=null; A.takeBuf[d.dtr]=null; dawMsg='Track '+(+d.dtr+1)+' cleared.'; }
+  else if(d.dtr!==undefined){ if(d.k==='arm'&&A.rec) return; const t=S.daw.tr[d.dtr]; t[d.k]=!t[d.k]; }
+  render(); });
+dawEl.addEventListener('input',e=>{ const d=e.target.dataset; if(e.target.id==='dclickout'){ S.daw.click.out=+e.target.value; render(); return; } if(d.dtr===undefined) return; if(d.k==='inp'&&A.rec) return; S.daw.tr[d.dtr][d.k]=+e.target.value; render(); });
+
+// ================= meter bridge =================
+const BR=[['CHANNELS',CHS.map(i=>['ch'+i,String(i+1)])],['TRACK BUSES',[1,2,3,4,5,6,7,8].map(k=>['tb'+k,String(k)])],
+  ['CUE A',[['cueAL','L'],['cueAR','R']]],['CUE B',[['cueBL','L'],['cueBR','R']]],['SOLO',[['soloL','L'],['soloR','R']]],['MONITOR',[['monL','L'],['monR','R']]]];
+const BRVU=[['REC BUS',[['recL','L'],['recR','R']]],['MIX BUS',[['mixL','L'],['mixR','R']]]];
+$('bridge').innerHTML='<div class="bscale"><span>0</span><span>−12</span><span>−24</span><span>−36</span><span>−48</span></div>'
+  +BR.map(([t,ms])=>`<div class="bg" ${/CUE|SOLO/.test(t)?'data-tip="cueMeter" data-label="'+t+' meter"':''}><div class="bg-t">${t}</div><div class="bms">${ms.map(([id,l])=>`<div class="bm"><div class="meter"><i id="br-${id}"></i></div><span>${l}</span></div>`).join('')}</div></div>`).join('')
+  +BRVU.map(([t,ms])=>`<div class="bg"><div class="bg-t">${t} · VU</div><div class="vus">${ms.map(([id,l])=>vuSVG(id,l)).join('')}</div></div>`).join('');
+function drawBridge(R){
+  if(A.on) return;
+  const p=(id,on)=>$('br-'+id).style.height=on?'55%':'0';
+  CHS.forEach(i=>p('ch'+i,R.chans[i].post.length)); for(let k=1;k<=8;k++) p('tb'+k,R.F['tb'+k].sigs.length);
+  ['L','R'].forEach(x=>{ p('mon'+x,R.D.mon.length); p('cueA'+x,R.F.cuea.sigs.length); p('cueB'+x,R.F.cueb.sigs.length); p('solo'+x,R.D.solo.length);
+    setNeedle('rec'+x,R.F.reco.sigs.length?VUP(-7):0); setNeedle('mix'+x,R.F.mixo.sigs.length?VUP(-7):0); });
+  setNeedle('bcn',1);
+}
+
+// ================= live room =================
+$('stations').innerHTML=CHS.map(k=>`<div class="stn" id="stn-${k}"><div class="stn-h"><b id="stn-n-${k}"></b><span>wall box ${k+1}</span></div>
+  <button class="b green" data-plug="${k}" data-tip="plug" data-label="Plug into wall box">PLUGGED INTO WALL BOX ${k+1}</button>
+  <label>SOURCE<select data-room="${k}" data-k="src" id="rs-${k}" aria-label="Station ${k+1} source"><option value="">nothing</option>${Object.keys(INSTR).map(x=>`<option value="${x}">${SRCN[x]}</option>`).join('')}</select></label>
+  <label>PICK‑UP<select data-room="${k}" data-k="mic" id="rm-${k}" aria-label="Station ${k+1} microphone or DI"></select></label>
+  <div class="badges" id="rb-${k}"></div></div>`).join('');
+function drawRoom(R){
+  let wb='';
+  CHS.forEach(k=>{
+    const r=S.room[k], n=k+1, m=mlInfo(n), st=$('stn-'+k);
+    st.style.setProperty('--c',m?KCOL[m.k]:'var(--line)'); st.classList.toggle('off',!r.plug);
+    $('stn-n-'+k).textContent=m?m.name:(r.src?SRCN[r.src]:'Empty');
+    const pbn=st.querySelector('[data-plug]'); pbn.classList.toggle('on',r.plug); pbn.textContent=r.plug?'PLUGGED INTO WALL BOX '+n:'UNPLUGGED · CLICK TO PLUG IN';
+    $('rs-'+k).value=r.src||'';
+    const ms=$('rm-'+k), list=r.src?INSTR[r.src].mics:[], key=list.join(',');
+    if(ms.dataset.list!==key){ ms.dataset.list=key; ms.innerHTML=list.length?list.map(x=>`<option value="${x}">${MIC[x].n}</option>`).join(''):'<option>—</option>'; }
+    ms.disabled=!list.length; if(list.length) ms.value=r.mic;
+    const chs=CHS.filter(i=>srcOf('mic'+(i+1))==='ml'+n);
+    let b='';
+    if(m){ b+=`<span class="bdg">${r.mic==='di'?'DI':'mic'} level ${fmtL(m.lvl)}</span>`;
+      if(!chs.length) b+='<span class="bdg">not on any channel</span>';
+      chs.forEach(i=>{ b+=`<span class="bdg">→ CH ${i+1}</span>`; if(m.cond) b+=S.ch[i].phantom?`<span class="bdg ok">48V on</span>`:`<span class="bdg warn">CH ${i+1} needs 48V</span>`; }); }
+    else if(r.src&&!r.plug) b=`<span class="bdg">cable out · mic line ${n} is free</span>`+(chs.length?`<span class="bdg">CH ${chs.map(i=>i+1).join(', ')} free: FLIP it to play from the DAW</span>`:'');
+    else b='<span class="bdg">nothing plugged in</span>';
+    $('rb-'+k).innerHTML=b;
+    wb+=`<button class="sock ${m?'on':''}" data-plug="${k}" data-tip="plug" data-label="Wall box ${n}" aria-label="Wall box socket ${n}: ${m?m.name+', plugged':'empty'}"><span>${n}</span><span class="h"></span><span>${m?m.name:(r.src&&!r.plug?'unplugged':'—')}</span></button>`;
+  });
+  $('wbs').innerHTML=wb;
+  $('phones').innerHTML=[['Headphones A','pha'],['Headphones B','phb']].map(([t,id])=>{ const l=R.D[id], s=srcOf(id);
+    return `<div class="out ${l.length?'has':''}"><div class="out-t">${t}<small>fed by ${s?PT[s].label:'nothing'}</small></div><div class="chips">${chips(l)}</div></div>`; }).join('');
+}
+$('hpamp').innerHTML=`<div class="pnl-t">HEADPHONE AMP</div>${pb('hp.on','AMP ON','green','hpOn')}
+  <div class="kb">${RK({path:'hp.a',label:'HP A',min:0,max:10,sm:true,tip:'hpLvl',fmt:'lvdb',aria:'Headphones A level'})}${pb('hp.plugA','HP A PLUGGED','amber','hpPlug')}</div>
+  <div class="kb">${RK({path:'hp.b',label:'HP B',min:0,max:10,sm:true,tip:'hpLvl',fmt:'lvdb',aria:'Headphones B level'})}${pb('hp.plugB','HP B PLUGGED','amber','hpPlug')}</div>`;
+$('view-room').addEventListener('click',e=>{ const b=e.target.closest('[data-plug]'); if(!b) return; const r=S.room[b.dataset.plug]; if(!r.src) return; r.plug=!r.plug; render(); });
+$('stations').addEventListener('input',e=>{ const d=e.target.dataset; if(d.room===undefined) return; const r=S.room[d.room];
+  if(d.k==='src'){ r.src=e.target.value||null; if(r.src){ r.mic=INSTR[r.src].mics[0]; r.plug=true; } } else r.mic=e.target.value;
+  render(); });
+
+// ================= outboard units =================
+const rk=(path,label,min,max,o={})=>RK(Object.assign({path,label,min,max,aria:label,lg:true},o));
+$('unit-rev').innerHTML=`<div class="u-brand"><b>REVERB</b><small>OUTBOARD HALL · MODEL RV‑2</small></div>
+  <div class="u-knobs">${rk('rev.inLvl','INPUT',-12,12,{fmt:'db',tip:'rvIn',color:'#5a6f91'})}${rk('rev.pre','PRE‑DELAY',0,150,{fmt:'ms',tip:'rvPre',color:'#7f9cc7'})}${rk('rev.decay','DECAY',0.3,6,{step:0.1,fmt:'s',tip:'rvDecay',color:'#c9a43a'})}${rk('rev.damp','DAMPING',1500,16000,{log:1,fmt:'hz',tip:'rvDamp',color:'#7f9cc7'})}${rk('rev.mix','MIX',0,100,{step:5,fmt:'pct',tip:'rvMix',color:'#c9a43a'})}${rk('rev.out','OUTPUT',-12,12,{fmt:'db',tip:'rvOut',color:'#5a6f91'})}</div>
+  <div class="u-side"><div class="u-m">IN<div class="hm"><i id="rvmi"></i></div></div><div class="u-m">OUT<div class="hm"><i id="rvmo"></i></div></div><div class="row">${pb('rev.byp','BYPASS','red','byp')}</div></div>`;
+const cmpHTML=(key,n,p)=>`<div class="u-brand"><b>COMP ${n}</b><small>OUTBOARD VCA COMPRESSOR · MODEL C‑4</small></div>
+  <div class="u-knobs">${rk(key+'.thr','THRESHOLD',-40,0,{fmt:'db',tip:'cpThr',color:'#d0782e'})}${rk(key+'.ratio','RATIO',1,20,{step:0.5,fmt:'ratio',tip:'cpRatio',color:'#d0782e'})}${rk(key+'.att','ATTACK',1,100,{fmt:'ms',tip:'cpAtt',color:'#8a8f98'})}${rk(key+'.rel','RELEASE',20,1000,{log:1,fmt:'ms',tip:'cpRel',color:'#8a8f98'})}${rk(key+'.mk','MAKE‑UP',0,20,{fmt:'db',tip:'cpMk',color:'#d0782e'})}</div>
+  <div class="u-side"><div class="u-m">IN<div class="hm"><i id="${p}mi"></i></div></div><div class="u-m">GR<div class="hm gr"><i id="${p}gr"></i></div></div><div class="u-m">OUT<div class="hm"><i id="${p}mo"></i></div></div><div class="row">${pb(key+'.byp','BYPASS','red','byp')}</div></div>`;
+$('unit-cmp').innerHTML=cmpHTML('comp',1,'cp'); $('unit-cmp2').innerHTML=cmpHTML('comp2',2,'cp2');
+function connHTML(id,R){
+  const p=PT[id];
+  if(p.io==='in'){ const s=srcOf(id); return `<div class="out-t">${p.label}<small>${p.normal?'normalled from '+PT[p.normal].label:'no normal'}</small></div><div>Fed by: <b>${s?PT[s].label:'nothing patched'}</b></div><div class="chips">${chips(s?R.F[s].sigs:[])}</div><div class="row"><button class="tool" data-goto="patchbay">Open patchbay</button></div>`; }
+  const dests=Object.values(PT).filter(q=>q.io==='in'&&srcOf(q.id)===id).map(q=>q.label);
+  return `<div class="out-t">${p.label}<small>${dests.length?'goes to '+dests.join(', '):'not patched anywhere'}</small></div><div class="chips">${chips(R.F[id].sigs)}</div>`;
+}
+function drawRack(R){
+  $('rv-in').innerHTML=connHTML('rvi',R); $('rv-out').innerHTML=connHTML('rvo',R);
+  $('cp-in').innerHTML=connHTML('cpi',R); $('cp-out').innerHTML=connHTML('cpo',R);
+  $('cp2-in').innerHTML=connHTML('cp2i',R); $('cp2-out').innerHTML=connHTML('cp2o',R);
+  ['rv-in','rv-out','cp-in','cp-out','cp2-in','cp2-out'].forEach(id=>{ const el=$(id); el.classList.toggle('has',!!el.querySelector('.chip')); });
+}
+
+// ================= tabs =================
+const VIEWS=['room','console','patchbay','daw','reverb','compressor','exam'];
+function showView(v){
+  if(!VIEWS.includes(v)) v='console';
+  VIEWS.forEach(x=>{ $('view-'+x).hidden=x!==v; $('tab-'+x).setAttribute('aria-selected',x===v); });
+  if(location.hash!=='#'+v) history.replaceState(null,'','#'+v);
+  if(v==='patchbay') requestAnimationFrame(drawCables);
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showView(t.dataset.view)));
+window.addEventListener('hashchange',()=>showView(location.hash.slice(1)));
+
+// ================= audio =================
+const A={ctx:null,on:false,edges:[],listen:'spk',rec:null,takeBuf:[],src:[],LAT:0};
+const BPM=96, SIX=60/BPM/4, LOOP=64*SIX, mtof=m=>440*Math.pow(2,(m-69)/12);
+const posFrac=t=>((((t-A.loopT0)/LOOP)%1)+1)%1;
+function G(v){ const g=A.ctx.createGain(); g.gain.value=(v===undefined?1:v); return g; }
+function compUnit(){ const c=A.ctx.createDynamicsCompressor(), m=G(1); c.knee.value=6; c.connect(m);
+  return {in:c,out:m,c,set(on,thr,ratio,att,rel,mk){ const t=A.ctx.currentTime; c.threshold.setValueAtTime(on?thr:0,t); c.ratio.setValueAtTime(on?ratio:1,t); c.attack.setValueAtTime(att,t); c.release.setValueAtTime(rel,t); m.gain.setTargetAtTime(on?mk*autoMkCancel(thr,ratio):1,t,0.02); }}; }
+// Web Audio's compressor adds automatic make-up gain (about 0.6 x the gain reduction at full scale); cancel it so gain reduction is heard as a level drop, as on the desk
+const autoMkCancel=(thr,ratio)=>Math.pow(10,0.6*thr*(1-1/ratio)/20);
+function eqUnit(){ const ctx=A.ctx, mkf=t=>{ const f=ctx.createBiquadFilter(); f.type=t; return f; };
+  const u={hpf:mkf('highpass'),lf:mkf('lowshelf'),lmf:mkf('peaking'),hmf:mkf('peaking'),hf:mkf('highshelf')};
+  u.hpf.frequency.value=10; u.hpf.Q.value=0.707; u.hpf.connect(u.lf); u.lf.connect(u.lmf); u.lmf.connect(u.hmf); u.hmf.connect(u.hf);
+  u.in=u.hpf; u.out=u.hf; return u; }
+function applyEQ(u,c,t){ const set=(p,v)=>p.setTargetAtTime(v,t,0.015);
+  set(u.hpf.frequency,c.eq&&c.hpf?c.hpfF:10);
+  u.lf.type=c.lfBell?'peaking':'lowshelf'; set(u.lf.frequency,c.lfF); set(u.lf.gain,c.eq?c.lfG:0); u.lf.Q.value=0.9;
+  set(u.lmf.frequency,c.lmfF); set(u.lmf.gain,c.eq?c.lmfG:0); set(u.lmf.Q,c.lmfQ);
+  set(u.hmf.frequency,c.hmfF); set(u.hmf.gain,c.eq?c.hmfG:0); set(u.hmf.Q,c.hmfQ);
+  u.hf.type=c.hfBell?'peaking':'highshelf'; set(u.hf.frequency,c.hfF); set(u.hf.gain,c.eq?c.hfG:0); u.hf.Q.value=0.9; }
+function impulse(sec,rt){ const ctx=A.ctx, len=Math.floor(ctx.sampleRate*sec), b=ctx.createBuffer(2,len,ctx.sampleRate), sr=ctx.sampleRate;
+  for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(rt?Math.exp(-6.9*i/sr/rt):Math.pow(1-i/len,3)); } return b; }
+function softClip(){ const s=A.ctx.createWaveShaper(), n=2048, cv=new Float32Array(n); for(let i=0;i<n;i++){ const u=i/(n-1)*2-1; cv[i]=Math.tanh(4*u); }
+  s.curve=cv; s.oversample='2x'; const pre=G(0.25); pre.connect(s); return {in:pre,out:s}; }
+function env(g,t,a,peak,dur,rel){ g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(peak,t+a); g.gain.setValueAtTime(peak,t+Math.max(a,dur-rel)); g.gain.linearRampToValueAtTime(0,t+dur); }
+const CHORDS=[[57,60,64],[53,57,60],[55,60,64],[55,59,62]], ROOTS=[45,41,48,43];
+const MEL=[[0,69,6],[6,72,2],[8,71,4],[12,69,4],[16,69,6],[22,67,2],[24,65,8],[32,64,4],[36,67,4],[40,72,8],[48,71,6],[54,69,2],[56,67,8]];
+const KICK=[0,6,8], SNARE=[4,12];
+function noiseHit(t,dur,peak,type,freq,q,dest){ const ctx=A.ctx, s=ctx.createBufferSource(); s.buffer=A.noiseBuf; const f=ctx.createBiquadFilter(); f.type=type; f.frequency.value=freq; if(q) f.Q.value=q;
+  const e=G(0); e.gain.setValueAtTime(peak,t); e.gain.exponentialRampToValueAtTime(0.001,t+dur); s.connect(f); f.connect(e); e.connect(dest); s.start(t,Math.random()*1.5); s.stop(t+dur+0.02); }
+function kickHit(t,peak,dest){ const o=A.ctx.createOscillator(); o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(45,t+0.12);
+  const e=G(0); e.gain.setValueAtTime(peak,t); e.gain.exponentialRampToValueAtTime(0.001,t+0.4); o.connect(e); e.connect(dest); o.start(t); o.stop(t+0.42); }
+function snareHit(t,peak,dest){ noiseHit(t,0.2,peak,'bandpass',1900,0.7,dest); const o=A.ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(200,t); o.frequency.exponentialRampToValueAtTime(150,t+0.1);
+  const e=G(0); e.gain.setValueAtTime(peak*0.7,t); e.gain.exponentialRampToValueAtTime(0.001,t+0.12); o.connect(e); e.connect(dest); o.start(t); o.stop(t+0.14); }
+const part=(lvl,play)=>{ const out=G(lvl); return {out,play:(s,t)=>play(s,t,out)}; };
+function makeParts(){
+  const ctx=A.ctx;
+  const vocal=(()=>{ const out=G(0.55), inp=G(1);
+    [[700,6,1],[1150,7,0.7],[2700,8,0.35]].forEach(([f,q,l])=>{ const b=ctx.createBiquadFilter(); b.type='bandpass'; b.frequency.value=f; b.Q.value=q; const g=G(l); inp.connect(b); b.connect(g); g.connect(out); });
+    return {out,play(step,t){ MEL.forEach(([s,m,len])=>{ if(s!==step) return; const d=len*SIX; const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtof(m);
+      const lfo=ctx.createOscillator(), lg=G(mtof(m)*0.012); lfo.frequency.value=5.5; lfo.connect(lg); lg.connect(o.frequency);
+      const e=G(0); env(e,t,0.06,1,d,0.08); o.connect(e); e.connect(inp); o.start(t); lfo.start(t); o.stop(t+d+0.05); lfo.stop(t+d+0.05); }); }}; })();
+  const synth=(()=>{ const out=G(0.06), lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1800; lp.Q.value=2; lp.connect(out);
+    return {out,play(step,t){ const s=step%16; if(s!==0&&s!==8) return; const ch=CHORDS[Math.floor(step/16)], d=SIX*7.5;
+      ch.forEach(m=>[-8,8].forEach(det=>{ const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=mtof(m+12); o.detune.value=det; const e=G(0); env(e,t,0.04,1,d,0.3); o.connect(e); e.connect(lp); o.start(t); o.stop(t+d+0.05); })); }}; })();
+  const room=(()=>{ const out=G(0.5), pre=G(1), lp=ctx.createBiquadFilter(), cv=ctx.createConvolver(), dry=G(0.25); lp.type='lowpass'; lp.frequency.value=3500; cv.buffer=impulse(1.1);
+    pre.connect(lp); lp.connect(cv); cv.connect(out); lp.connect(dry); dry.connect(out);
+    return {out,play(step,t){ const s=step%16; if(KICK.includes(s)) kickHit(t,0.5,pre); if(SNARE.includes(s)) snareHit(t,0.6,pre); if(s%2===0) noiseHit(t,0.05,0.15,'highpass',7000,0,pre); }}; })();
+  const osc=(()=>{ const out=G(0.3), o=ctx.createOscillator(); o.frequency.value=1000; o.connect(out); o.start(); return {out,o,play(){}}; })();
+  const noise=(()=>{ const out=G(0.5), len=ctx.sampleRate*3, b=ctx.createBuffer(1,len,ctx.sampleRate), d=b.getChannelData(0); let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for(let i=0;i<len;i++){ const w=Math.random()*2-1; b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759; b2=0.969*b2+w*0.153852; b3=0.8665*b3+w*0.3104856; b4=0.55*b4+w*0.5329522; b5=-0.7616*b5-w*0.016898; d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926; }
+    const s=ctx.createBufferSource(); s.buffer=b; s.loop=true; s.connect(out); s.start(); return {out,play(){}}; })();
+  return {
+    kick:part(0.32,(s,t,o)=>{ if(KICK.includes(s%16)) kickHit(t,1,o); }),
+    snare:part(0.3,(s,t,o)=>{ if(SNARE.includes(s%16)) snareHit(t,1.4,o); }),
+    hat:part(0.35,(step,t,o)=>{ const s=step%16; if(s%2) return; noiseHit(t,s===14?0.28:0.045,s%4===0?0.9:0.55,'highpass',8000,0,o); }),
+    oh:part(0.3,(step,t,o)=>{ const s=step%16; if(step===0) noiseHit(t,1.8,0.9,'highpass',4500,0,o); else if(s%2===0) noiseHit(t,s===14?0.25:0.05,0.6,'highpass',7500,0,o);
+      if(KICK.includes(s)) kickHit(t,0.25,o); if(SNARE.includes(s)) snareHit(t,0.5,o); }),
+    bass:part(0.3,(step,t,o)=>{ const bar=Math.floor(step/16), s=step%16; if(s%2) return; const d=SIX*1.8; const x=ctx.createOscillator(); x.type='sawtooth'; x.frequency.value=mtof(ROOTS[bar]+(s%8===6?12:0));
+      const f=ctx.createBiquadFilter(); f.type='lowpass'; f.Q.value=3; f.frequency.setValueAtTime(1200,t); f.frequency.exponentialRampToValueAtTime(220,t+d);
+      const e=G(0); env(e,t,0.005,1,d,0.04); x.connect(f); f.connect(e); e.connect(o); x.start(t); x.stop(t+d+0.02); }),
+    vocal, synth, room, osc, noise };
+}
+function initAudio(){
+  const ctx=A.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const nb=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate), nd=nb.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1; A.noiseBuf=nb;
+  A.master=G(0.6); A.lim=ctx.createDynamicsCompressor(); A.lim.threshold.value=-3; A.lim.ratio.value=20; A.lim.attack.value=0.002; A.lim.release.value=0.1;
+  A.master.connect(A.lim); A.lim.connect(ctx.destination); A.masterAn=ctx.createAnalyser(); A.masterAn.fftSize=512; A.lim.connect(A.masterAn);
+  A.parts=makeParts(); const P=A.parts;
+  A.out={}; A.inp={};
+  Object.values(PT).forEach(p=>{ if(p.io==='out') A.out[p.id]=G(1); else A.inp[p.id]=G(1); });
+  A.out.daw2.gain.value=0.35;
+  P.osc.out.connect(A.out.osc); P.noise.out.connect(A.out.noise); A.oscNode=P.osc.o;
+  const an=()=>{ const a=ctx.createAnalyser(); a.fftSize=512; return a; };
+  A.ch=S.ch.map((_,i)=>{ const n=i+1;
+    const x={micPre:G(0),clip:softClip(),micOut:G(1),noiseG:G(0.0006),lineAmp:G(1),chanIn:G(1),altOut:G(1),phase:G(1),imute:G(1),
+      pre:G(1),fader:G(1),pan:ctx.createStereoPanner(),cue:G(0),cueP:ctx.createStereoPanner(),fx1:G(0),fx2:G(0),an:an(),eq:eqUnit(),dyn:compUnit()};
+    x.cue.connect(x.cueP);
+    const noise=ctx.createBufferSource(); noise.buffer=nb; noise.loop=true; noise.start(ctx.currentTime+Math.random()); noise.connect(x.noiseG); x.noiseG.connect(x.micOut);
+    A.inp['mic'+n].connect(x.micPre); x.micPre.connect(x.clip.in); x.clip.out.connect(x.micOut);
+    A.inp['line'+n].connect(x.lineAmp);
+    x.chanIn.connect(x.phase); x.phase.connect(x.imute); x.fader.connect(x.pan); x.pan.connect(x.an);
+    return x; });
+  A.bus={rec:G(1),mix:G(1),pfl:G(1),afl:G(1),cueA:G(1),cueB:G(1),fx:[G(1),G(1),G(1),G(1)]};
+  A.mG={cuea:G(1),cueb:G(1),fx:[G(1),G(1),G(1),G(1)]};
+  A.bus.cueA.connect(A.mG.cuea); A.mG.cuea.connect(A.out.cuea); A.bus.cueB.connect(A.mG.cueb); A.mG.cueb.connect(A.out.cueb);
+  A.bus.fx.forEach((b,k)=>{ b.connect(A.mG.fx[k]); A.mG.fx[k].connect(A.out['fx'+(k+1)]); });
+  A.fb={}; [['fbA','fba'],['fbB','fbb']].forEach(([f,o])=>{ const x={m1:G(1),m2:G(1),crm:G(1),sum:G(1),lvl:G(1)}; x.m1.connect(x.sum); x.m2.connect(x.sum); x.crm.connect(x.sum); x.sum.connect(x.lvl); x.lvl.connect(A.out[o]); A.fb[f]=x; });
+  A.oscG=G(0); A.oscSrc=G(1); A.oscSrc.connect(A.oscG);
+  A.mixComp=compUnit(); A.recMaster=G(1); A.recMaster.connect(A.out.reco); A.mixMaster=G(1); A.mixComp.out.connect(A.mixMaster); A.mixMaster.connect(A.out.mixo);
+  const sp=ctx.createChannelSplitter(2); A.mixMaster.connect(sp); A.mstL=an(); A.mstR=an(); sp.connect(A.mstL,0); sp.connect(A.mstR,1);
+  A.bus.mix.connect(A.out.mis); A.bus.rec.connect(A.out.ris);
+  const stereoAn=node=>{ const sp=ctx.createChannelSplitter(2), L=an(), R=an(); node.connect(sp); sp.connect(L,0); sp.connect(R,1); return [L,R]; };
+  A.tbAn=[1,2,3,4,5,6,7,8].map(k=>{ const a=an(); A.out['tb'+k].connect(a); return a; });
+  A.recAn=stereoAn(A.out.reco); A.mixAn=stereoAn(A.out.mixo); A.cueAAn=stereoAn(A.out.cuea); A.cueBAn=stereoAn(A.out.cueb); A.soloSum=G(1); A.soloAn=stereoAn(A.soloSum); A.vu={};
+  A.retG=[0,1,2,3].map(k=>{ const g=G(0); A.inp['ret'+(k+1)].connect(g); return g; });
+  A.retS=[0,1,2,3].map(k=>{ const g=G(0); A.inp['ret'+(k+1)].connect(g); return g; });
+  // outboard reverb
+  const rv=A.rv={inG:G(1),dry:G(0),pre:ctx.createDelay(0.5),conv:null,damp:ctx.createBiquadFilter(),wet:G(1),out:G(1),anI:an(),anO:an(),decay:0};
+  rv.damp.type='lowpass'; A.inp.rvi.connect(rv.inG); rv.inG.connect(rv.anI); rv.inG.connect(rv.dry); rv.dry.connect(rv.out); rv.inG.connect(rv.pre);
+  rv.damp.connect(rv.wet); rv.wet.connect(rv.out); rv.out.connect(A.out.rvo); rv.out.connect(rv.anO);
+  // delay and EQ (fixed settings)
+  const dly=ctx.createDelay(1); dly.delayTime.value=SIX*3; const fbk=G(0.38), dlp=ctx.createBiquadFilter(); dlp.type='lowpass'; dlp.frequency.value=3000;
+  A.inp.dli.connect(dly); dly.connect(dlp); dlp.connect(fbk); fbk.connect(dly); dly.connect(A.out.dlo);
+  const oe=eqUnit(); applyEQ(oe,{eq:true,hpf:false,hpfF:30,lfG:5,lfF:100,lfBell:false,lmfG:0,lmfF:500,lmfQ:1,hmfG:0,hmfF:2000,hmfQ:1,hfG:6,hfF:6000,hfBell:false},0); A.inp.eqi.connect(oe.in); oe.out.connect(A.out.eqo);
+  // outboard compressor
+  const cpU=(i,o)=>{ const u={inG:G(1),dc:ctx.createDynamicsCompressor(),mk:G(1),out:G(1),anI:an(),anO:an()};
+    u.dc.knee.value=3; A.inp[i].connect(u.inG); u.inG.connect(u.anI); u.dc.connect(u.mk); u.mk.connect(u.out); u.out.connect(A.out[o]); u.out.connect(u.anO); return u; };
+  A.cps=[cpU('cpi','cpo'),cpU('cp2i','cp2o')];
+  // DAW: 8 tracks, capture through one script processor
+  A.dawM=ctx.createChannelMerger(8); A.cap=ctx.createScriptProcessor(2048,8,1); A.dawM.connect(A.cap); const z=G(0); A.cap.connect(z); z.connect(ctx.destination);
+  for(let j=0;j<8;j++) A.inp['dawi'+(j+1)].connect(A.dawM,0,j);
+  A.daw=S.daw.tr.map((_,k)=>{ const x={inG:G(1),mon:G(0),play:G(0),vol:G(1),an:an()}; x.inG.connect(x.an);
+    x.inG.connect(x.mon); x.mon.connect(x.vol); x.play.connect(x.vol); x.vol.connect(A.out.daw2); return x; });
+  A.cap.onaudioprocess=e=>{ const Rc=A.rec; if(!Rc||Rc.done) return; const n=e.inputBuffer.length, len=Rc.len;
+    const t0=(e.playbackTime||ctx.currentTime)-A.LAT, start=Math.floor(posFrac(t0)*len);
+    Rc.tr.forEach((k,i)=>{ const d=e.inputBuffer.getChannelData(Rc.ch[i]), b=Rc.bufs[i]; for(let j=0;j<n;j++) b[(start+j)%len]=d[j]; });
+    Rc.count+=n; if(Rc.count>=len+n){ Rc.done=true; setTimeout(finishRec,0); } };
+  A.LAT=2048*2/ctx.sampleRate;
+  A.hpG={pha:G(1),phb:G(1)}; A.clickG=G(1);
+  A.clickHit=(t,acc)=>{ const o=ctx.createOscillator(), g=G(0); o.frequency.value=acc?1760:1320; o.connect(g); g.connect(A.clickG); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.5,t+0.002); g.gain.exponentialRampToValueAtTime(0.0001,t+0.05); o.start(t); o.stop(t+0.06); };
+  A.monSel=G(1); A.dim=G(1); A.mono=G(1); A.mono.channelCount=1; A.mono.channelCountMode='explicit'; A.monCut=G(1);
+  A.monSel.connect(A.dim); A.mono.connect(A.monCut); A.monAn=stereoAn(A.monCut);
+  A.step=0; A.next=ctx.currentTime+0.1; A.loopT0=A.next;
+  A.timer=setInterval(()=>{ if(!A.on) return; while(A.next<ctx.currentTime+0.15){ const st=A.step%64; if(st===0) A.loopT0=A.next; Object.values(A.parts).forEach(p=>p.play(st,A.next)); if(S.daw.click.on&&S.daw.play&&st%4===0) A.clickHit(A.next,st%16===0); A.next+=SIX; A.step++; } },25);
+  requestAnimationFrame(meterLoop);
+}
+function E(a,b){ a.connect(b); A.edges.push([a,b]); }
+function dawSync(){
+  if(!A.ctx) return; const now=A.ctx.currentTime;
+  S.daw.tr.forEach((t,k)=>{
+    const buf=S.daw.play&&t.take&&t.take.kind==='buf'?A.takeBuf[k]:null, cur=A.src[k];
+    if(cur&&cur.buf===buf) return;
+    if(cur){ try{ cur.node.stop(); }catch(e){} cur.node.disconnect(); A.src[k]=null; }
+    if(buf){ const s=A.ctx.createBufferSource(); s.buffer=buf; s.loop=true; s.connect(A.daw[k].play); s.start(now,posFrac(now)*LOOP); A.src[k]={node:s,buf}; }
+  });
+}
+function rewire(R){
+  A.edges.forEach(([a,b])=>{ try{ a.disconnect(b); }catch(e){} }); A.edges=[];
+  const t=A.ctx.currentTime, set=(p,v)=>p.setTargetAtTime(v,t,0.015), C=S.c, Bs=A.bus, OUT=A.out, IN=A.inp;
+  Object.values(PT).forEach(p=>{ if(p.io!=='in') return; const s=srcOf(p.id); if(s&&OUT[s]) E(OUT[s],IN[p.id]); });
+  for(let n=1;n<=8;n++){ const m=mlInfo(n); if(!m) continue; set(OUT['ml'+n].gain,dbG(m.lvl)); E(A.parts[m.k].out,OUT['ml'+n]); }
+  S.ch.forEach((c,i)=>{ const x=A.ch[i], r=R.chans[i], n=i+1;
+    set(x.micPre.gain, r.micLvl===null?0:Math.pow(10,(c.gain-(c.pad?20:0))/20));
+    set(x.lineAmp.gain, Math.pow(10,c.trim/20));
+    E(c.flip?x.lineAmp:x.micOut, x.chanIn); E(c.flip?x.micOut:x.lineAmp, x.altOut);
+    set(x.phase.gain,c.phase?-1:1); set(x.imute.gain,c.imute?0:1);
+    let prev=x.imute;
+    procOrder(c).forEach(p=>{
+      if(p==='ins'){ E(prev,OUT['is'+n]); if(c.ins) prev=IN['ir'+n]; }
+      else if(p==='eq'){ E(prev,x.eq.in); prev=x.eq.out; }
+      else if(dynOn(c)){ E(prev,x.dyn.in); prev=x.dyn.out; } });
+    E(prev,x.pre); applyEQ(x.eq,c,t);
+    if(dynOn(c)){ const u=C.dyn[c.dyn-1], th=u.thr-18; x.dyn.set(true,th,u.ratio,u.fast?0.001:0.01,u.rel,1); }
+    else x.dyn.set(false,0,1,0.01,0.25,1);
+    E(x.pre,x.fader); set(x.fader.gain,fdrGain(c.fader,c.cut)); set(x.pan.pan,c.pan/5);
+    const post=x.pan;
+    if(c.rec) E(post,Bs.rec); if(c.mix) E(post,Bs.mix);
+    c.trk.forEach(k=>{ if(c.trkPan&&((c.pan<0&&k%2===0)||(c.pan>0&&k%2===1))) return; E(c.trkCue?x.cue:(c.trkPre?x.pre:post), OUT['tb'+k]); });
+    set(x.cue.gain,c.cueOn?c.cue/10:0); set(x.cueP.pan,c.cuePan/5); E(c.cueEfx?x.altOut:(c.cuePost?post:x.pre),x.cue); if(!c.trkCue) E(x.cueP,c.cueB?Bs.cueB:Bs.cueA);
+    set(x.fx1.gain,c.fx1On?c.fx1/10:0); E(c.fx1Efx?x.altOut:post,x.fx1); E(x.fx1,Bs.fx[c.fx1to3?2:0]);
+    set(x.fx2.gain,c.fx2On?c.fx2/10:0); E(c.fx2Efx?x.altOut:post,x.fx2); E(x.fx2,Bs.fx[c.fx2to4?3:1]);
+    E(c.direct==='pre'?x.pre:c.direct==='post'?post:x.altOut, OUT['dir'+n]);
+    if(c.solo){ E(x.pre,Bs.pfl); E(post,Bs.afl); }
+  });
+  set(A.mG.cuea.gain,lvlGain(C.cueA.lvl)); set(A.mG.cueb.gain,lvlGain(C.cueB.lvl)); C.fx.forEach((f,k)=>set(A.mG.fx[k].gain,lvlGain(f.lvl)));
+  C.ret.forEach((r,k)=>{ set(A.retG[k].gain,r.lvl/10*1.2); set(A.retS[k].gain,r.studio/10*1.2);
+    if(r.mix) E(A.retG[k],Bs.mix); if(r.rec) E(A.retG[k],Bs.rec); if(r.fba) E(A.retS[k],A.fb.fbA.sum); if(r.fbb) E(A.retS[k],A.fb.fbB.sum); });
+  // oscillator into the buses
+  const O=C.osc; A.oscNode.frequency.setTargetAtTime(OSCF[O.freq]||1000,t,0.01);
+  if(O.on) E(OUT.osc,A.oscSrc); if(O.pink) E(OUT.noise,A.oscSrc); set(A.oscG.gain,lvlGain(O.lvl));
+  if(O.rec) E(A.oscG,Bs.rec); if(O.mix) E(A.oscG,Bs.mix); if(O.trk) for(let k=1;k<=8;k++) E(A.oscG,OUT['tb'+k]);
+  C.trkM.forEach((m,k)=>set(OUT['tb'+(k+1)].gain,lvlGain(m.lvl)));
+  const bc=C.bc; E(C.mixIns?IN.mir:OUT.mis, A.mixComp.in); A.mixComp.set(C.mixComp,bc.thr,+bc.ratio,+bc.att/1000,bc.rel==='auto'?0.25:+bc.rel,dbG(bc.mk)); set(A.mixMaster.gain,fdrGain(C.master,false));
+  E(C.recIns?IN.rir:OUT.ris, A.recMaster); set(A.recMaster.gain,fdrGain(C.recMaster,false));
+  const crNode=C.mon==='mix'?OUT.mixo:C.mon==='rec'?OUT.reco:C.mon==='exta'?IN.exta:C.mon==='extb'?IN.extb:null;
+  [['fbA','cuea','fbaext'],['fbB','cueb','fbbext']].forEach(([f,cue,ext])=>{ const x=A.fb[f], s=C[f];
+    if(s.cue) E(OUT[cue],x.sum); set(x.m1.gain,lvlGain(s.m1)); set(x.m2.gain,lvlGain(s.m2));
+    if(s.m1rec) E(OUT.reco,x.m1); if(s.m1ext) E(IN[ext],x.m1); if(s.m2mix) E(OUT.mixo,x.m2); if(s.m2ext) E(IN[ext],x.m2);
+    if(s.crmon){ if(crNode) E(crNode,x.crm); else if(C.mon==='trk') for(let k=1;k<=8;k++) E(OUT['tb'+k],x.crm); }
+    set(x.lvl.gain,s.cut?0:lvlGain(s.lvl)); });
+  // DAW
+  S.daw.tr.forEach((tr,k)=>{ const x=A.daw[k], monOn=tr.arm||tr.mon;
+    set(x.mon.gain,monOn?1:0); set(x.play.gain,!monOn&&S.daw.play?1:0); set(x.vol.gain,tr.mute?0:fdrGain(tr.vol,false));
+    E(IN['dawi'+tr.inp],x.inG); E(x.vol,OUT['dawo'+tr.out]); if(tr.take&&tr.take.kind==='stem') E(A.parts[tr.take.k].out,x.play); });
+  dawSync();
+  // outboard units
+  const rv=A.rv, RV=S.rev;
+  if(rv.decay!==RV.decay){ if(rv.conv){ rv.pre.disconnect(); rv.conv.disconnect(); } rv.conv=A.ctx.createConvolver(); rv.conv.buffer=impulse(Math.min(7,RV.decay*1.25),RV.decay); rv.pre.connect(rv.conv); rv.conv.connect(rv.damp); rv.decay=RV.decay; }
+  set(rv.inG.gain,dbG(RV.inLvl)); rv.pre.delayTime.setTargetAtTime(RV.pre/1000,t,0.02); set(rv.damp.frequency,RV.damp);
+  set(rv.dry.gain,RV.byp?1:1-RV.mix/100); set(rv.wet.gain,RV.byp?0:RV.mix/100*1.4); set(rv.out.gain,RV.byp?1:dbG(RV.out));
+  [[A.cps[0],S.comp],[A.cps[1],S.comp2]].forEach(([cp,CP])=>{
+    E(cp.inG,CP.byp?cp.out:cp.dc); set(cp.dc.threshold,CP.thr); set(cp.dc.ratio,CP.ratio); set(cp.dc.attack,CP.att/1000); set(cp.dc.release,CP.rel/1000); set(cp.mk.gain,CP.byp?1:dbG(CP.mk)*autoMkCancel(CP.thr,CP.ratio)); });
+  // monitoring
+  if(R.D.chSolo) E(C.soloMode==='pfl'?Bs.pfl:Bs.afl, A.soloSum); R.D.afls.forEach(id=>E(OUT[id],A.soloSum));
+  if(R.D.anySolo) E(A.soloSum,A.monSel);
+  else if(C.mon==='mix') E(OUT.mixo,A.monSel); else if(C.mon==='rec') E(OUT.reco,A.monSel);
+  else if(C.mon==='trk') for(let k=1;k<=8;k++) E(OUT['tb'+k],A.monSel);
+  else if(C.mon==='exta') E(IN.exta,A.monSel); else if(C.mon==='extb') E(IN.extb,A.monSel);
+  set(A.dim.gain,(C.dim||C.tb.all||C.tb.fba||C.tb.fbb)?0.2:1); E(A.dim,C.mono?A.mono:A.monCut); set(A.monCut.gain,C.mcut?0:lvlGain(C.monLvl));
+  if(A.listen==='spk') E(A.monCut,A.master);
+  else if(A.listen==='pha'||A.listen==='phb'){ const g=A.hpG[A.listen], H=S.hp, on=H.on&&(A.listen==='pha'?H.plugA:H.plugB); set(g.gain,on?lvlGain(A.listen==='pha'?H.a:H.b):0); E(IN[A.listen],g); E(g,A.master); }
+  else E(IN[A.listen],A.master);
+  E(A.clickG,OUT['dawo'+S.daw.click.out]);
+  set(A.master.gain,(+$('vol').value/10)*0.9);
+}
+const MBUF=new Float32Array(512);
+function pk(an){ an.getFloatTimeDomainData(MBUF); let p=0; for(let k=0;k<MBUF.length;k++){ const v=Math.abs(MBUF[k]); if(v>p) p=v; } return 20*Math.log10(p+1e-6); }
+const hpct=d=>Math.max(0,Math.min(100,(d+48)/48*100))+'%';
+function rms(an){ an.getFloatTimeDomainData(MBUF); let q=0; for(let k=0;k<MBUF.length;k++) q+=MBUF[k]*MBUF[k]; return 10*Math.log10(q/MBUF.length+1e-12); }
+let lastT=0;
+function vuStep(id,an,dt){ const target=VUP(rms(an)+18), v=A.vu[id]||0; const nv=v+(target-v)*(1-Math.exp(-dt/0.065)); A.vu[id]=nv; setNeedle(id,nv); }
+function meterLoop(ts){
+  const dt=Math.min(0.1,Math.max(0.001,((ts||0)-lastT)/1000)); lastT=ts||0;
+  if(A.on){
+    const v=VIEWS.find(x=>!$('view-'+x).hidden);
+    if(v==='console'){ A.ch.forEach((x,i)=>{ $(`m-${i}`).style.height=hpct(pk(x.an)); });
+      [0,1].forEach(u=>{ const k=dynCh(u+1), g=k<0||!S.c.dyn[u].in?0:-A.ch[k].dyn.c.reduction; $('grl-'+u).querySelectorAll('span').forEach(s=>s.classList.toggle('on',g>=+s.dataset.g)); });
+      { const [L,Rr]=S.c.mfSel==='mix'?A.mixAn:A.recAn; $('mfL').style.height=hpct(pk(L)); $('mfR').style.height=hpct(pk(Rr)); }
+      A.ch.forEach((x,i)=>{ $('br-ch'+i).style.height=$(`m-${i}`).style.height; }); A.tbAn.forEach((a,k)=>{ $('br-tb'+(k+1)).style.height=hpct(pk(a)); });
+      [['mon',A.monAn],['cueA',A.cueAAn],['cueB',A.cueBAn],['solo',A.soloAn]].forEach(([n,[L,Rr]])=>{ $('br-'+n+'L').style.height=hpct(pk(L)); $('br-'+n+'R').style.height=hpct(pk(Rr)); });
+      [['rec',A.recAn],['mix',A.mixAn]].forEach(([n,[L,Rr]])=>{ vuStep(n+'L',L,dt); vuStep(n+'R',Rr,dt); });
+      const g=-A.mixComp.c.reduction, gv=A.vu.bc||0; A.vu.bc=gv+(g-gv)*(1-Math.exp(-dt/0.08)); setNeedle('bcn',GRP(A.vu.bc)); }
+    if(v==='daw') A.daw.forEach((x,k)=>{ $('dm-'+k).style.width=hpct(pk(x.an)); });
+    if(v==='reverb'){ $('rvmi').style.width=hpct(pk(A.rv.anI)); $('rvmo').style.width=hpct(pk(A.rv.anO)); }
+    if(v==='compressor') A.cps.forEach((u,j)=>{ const p=j?'cp2':'cp'; $(p+'mi').style.width=hpct(pk(u.anI)); $(p+'mo').style.width=hpct(pk(u.anO)); $(p+'gr').style.width=Math.min(100,-u.dc.reduction/20*100)+'%'; });
+    $('mm').style.width=hpct(pk(A.masterAn));
+    const p=posFrac(A.ctx.currentTime);
+    if(S.daw.play){ document.querySelectorAll('#daw .ph').forEach(el=>el.style.left=(p*100)+'%'); $('dclock').textContent='BAR '+(Math.floor(p*4)+1)+' · BEAT '+(Math.floor(p*16)%4+1); }
+    if(A.rec&&!A.rec.done) $('dawstat').textContent='● Recording track '+A.rec.tr.map(k=>k+1).join(', ')+'… '+Math.min(100,Math.round(A.rec.count/A.rec.len*100))+'%';
+  }
+  requestAnimationFrame(meterLoop);
+}
+async function setAudio(on){
+  const b=$('play'); if(!A.ctx) initAudio();
+  if(!on){ A.on=false; S.daw.play=false; if(A.rec){ A.rec=null; dawMsg='Audio stopped. The take was discarded.'; } dawSync(); await A.ctx.suspend(); b.textContent='▶ Start audio'; b.classList.remove('on'); render(); return; }
+  await A.ctx.resume(); A.next=Math.max(A.next,A.ctx.currentTime+0.05); A.loopT0=A.next-(A.step%64)*SIX; A.on=true; b.textContent='■ Stop audio'; b.classList.add('on'); render();
+}
+$('play').addEventListener('click',()=>setAudio(!A.on));
+document.querySelectorAll('[data-listen]').forEach(b=>b.addEventListener('click',()=>{ A.listen=b.dataset.listen; document.querySelectorAll('[data-listen]').forEach(x=>x.classList.toggle('on',x===b)); if(A.ctx) render(); }));
+$('vol').addEventListener('input',()=>{ if(A.ctx) A.master.gain.setTargetAtTime((+$('vol').value/10)*0.9,A.ctx.currentTime,0.02); });
+$('reset').addEventListener('click',()=>{ A.rec=null; A.takeBuf=[]; dawMsg=''; S=defaultState(); render(); });
+
+// ================= task mode (recording.everythingsoundacademy.com lessons) =================
+// desk.html?task=ID loads a studio set up for that task, shows the brief, checks it live,
+// and tells the lesson page (postMessage) once it is done. desk.html?exam=1 starts the exam.
+const QS=new URLSearchParams(location.search), TASK=QS.get('task'), EMBED=window.parent!==window;
+const tell=msg=>{ if(EMBED) window.parent.postMessage(Object.assign({source:'es-desk'},msg), location.origin); };
+const STEP={
+  plug:()=>{ S.room[0].plug=true; S.hp.on=true; S.hp.plugA=true; S.hp.a=6; },
+  gain:()=>{ const c=S.ch[0]; c.phantom=true; const m=mlInfo(1); c.gain=Math.max(15,Math.min(75,Math.round(-m.lvl))); },
+  recBus:()=>{ const c=S.ch[0]; c.rec=true; c.fader=75; S.c.recMaster=75; },
+  dawIn:()=>{ S.daw.tr[0].mon=true; },
+  dawRet:()=>{ S.daw.tr[0].out=5; const c=S.ch[4]; c.flip=true; c.mix=true; c.fader=75; S.c.master=75; S.c.mfSel='mix'; S.c.mon='mix'; S.c.monLvl=8; },
+  cue:()=>{ const c=S.ch[4]; c.cueOn=true; c.cue=8; S.c.cueA.lvl=8; S.c.fbA.cue=true; S.c.fbA.lvl=8; },
+  snare:(plug)=>{ S.room[1]={src:'snare',mic:'dyn',plug}; const c=S.ch[1]; c.gain=40; c.rec=true; c.fader=75; },
+};
+const ch=k=>LAST.chans[k];
+const TK={tr:{}};
+const TASKS={
+  plug:{t:'Plug in the vocal and the headphones',steps:[],
+    p:'The condenser vocal mic is on its stand in the live room, cable coiled at its feet. Plug it into the tie box (wall box 1) with phantom power OFF, switch the headphone amp on and plug headphones A in by the stand.',
+    h:'Live room tab: click PLUGGED on station 1 (check CH 1 48V is off first). Under the stations: AMP ON and HP A PLUGGED.',
+    ok:R=>!TK.tr.plug48&&S.room[0].plug&&S.hp.on&&S.hp.plugA, bad:()=>TK.tr.plug48?'The mic was plugged in with 48V on: that can damage a condenser. Unplug, switch 48V off, and plug in again.':''},
+  talkback:{t:'Talk to the musician',steps:['plug'],
+    p:'The singer is wearing headphones A. Use talkback so they hear you: talkback level up, foldback A up, headphone level up, then press TB ALL (or F/B A). The speakers dim while you talk.',
+    h:'Centre section, TALKBACK: TB TO F/B up and TB ALL. F/B A: LEVEL up. Live room: HP A level up.',
+    ok:R=>has(R.D.pha,'Talkback')},
+  gain:{t:'Gain stage the vocal',steps:['plug'],
+    p:'Channel 1 has the condenser vocal on its mic input. Switch on 48V before any gain, then raise the red MIC gain until the channel meter reads between −6 and +6 dB (metering stage 1).',
+    h:'Keep FLIP off (mic). Press 48V first. Then drag the red MIC gain up and watch the readout at the top of the strip.',
+    ok:R=>!TK.tr.late48&&S.ch[0].phantom&&!S.ch[0].flip&&ch(0).chLvl!==null&&ch(0).chLvl>=-6&&ch(0).chLvl<=6,
+    bad:()=>TK.tr.late48?'48V went on after the gain was up: a thump straight into the speakers. Turn the gain right down, switch 48V off, and start again.':''},
+  'rec-bus':{t:'Send the vocal to the REC bus',steps:['plug','gain'],
+    p:'Assign channel 1 to the REC bus, set its fader to 0 dB, then on REC / MIX bus functions select REC and raise the master fader until the REC VU meters move (metering stage 3).',
+    h:'CH 1: REC (red) and fader to 0.0. Master section: REC, then raise the fader. The REC BUS VU is in the meter bridge.',
+    ok:R=>S.ch[0].rec&&Math.abs(S.ch[0].fader-75)<=3&&has(R.F.reco.sigs,'Vocal')},
+  monitor:{t:'Hear the REC bus in the control room',steps:['plug','gain','recBus'],
+    p:'Choose REC as the monitor source, check the MONITOR meter in the bridge (metering stage 4), then raise the monitor level with the speakers uncut.',
+    h:'Centre section, MONITOR: REC, then MONITOR LEVEL up and CUT off.',
+    ok:R=>S.c.mon==='rec'&&!R.D.anySolo&&has(R.D.mon,'Vocal')&&S.c.monLvl>0&&!S.c.mcut},
+  'daw-in':{t:'Get the vocal into Pro Tools',steps:['plug','gain','recBus'],
+    p:'With the channel 1 fader up, the vocal already reaches DAW input 1 (metering stage 2). In the DAW, make track 1 listen to IN 1 and switch input monitoring on, so its meter moves.',
+    h:'DAW tab: track 1 input IN 1, press IN (or REC to arm).',
+    ok:R=>R.D.dawTr[0].monOn&&has(R.D.dawTr[0].inS,'Vocal')},
+  'daw-return':{t:'Return the DAW on channel 5 and monitor MIX',steps:['plug','gain','recBus','dawIn'],
+    p:'Send DAW track 1 out to OUT 5. On channel 5 press FLIP (line input), MIX, and fader to 0 dB. Select MIX on the master and raise it, monitor MIX, speakers up. This is confidence monitoring: you hear what is being recorded.',
+    h:'DAW tab: track 1 output OUT 5. CH 5: FLIP, MIX, fader 0. Master: MIX, raise the fader. MONITOR: MIX, level up.',
+    ok:R=>S.daw.tr[0].out===5&&S.ch[4].flip&&S.ch[4].mix&&has(R.F.mixo.sigs,'Vocal')&&S.c.mon==='mix'&&has(R.D.mon,'Vocal')&&S.c.monLvl>0&&!S.c.mcut},
+  record:{t:'Record a pass while monitoring off-tape',steps:['plug','gain','recBus','dawIn','dawRet'],
+    p:'Start the audio, arm track 1 and press RECORD. Keep listening to the MIX bus (off-tape) while the pass records.',
+    h:'Press ▶ Start audio at the top. DAW tab: REC on track 1, then ● RECORD, and wait for the pass to finish (about 10 seconds).',
+    ok:R=>TK.tr.offTape&&S.daw.tr[0].take&&S.daw.tr[0].take.kind==='buf'&&has(S.daw.tr[0].take.sigs,'Vocal (DAW)')},
+  trouble:{t:'Find out why channel 2 is silent',steps:['plug','gain','recBus','snare-off'],
+    p:'Channel 2 should carry the snare mic, gained up and on the REC bus, but its meter shows nothing. Find the fault and fix it, so the snare reaches the REC bus.',
+    h:'Work from the source: is the mic plugged in at the tie box? Check the Live room tab.',
+    ok:R=>has(ch(1).chIn,'Snare')&&has(R.F.reco.sigs,'Snare')},
+  cue:{t:'A cue mix for the singer',steps:['plug','gain','recBus','dawIn','dawRet'],
+    p:'Build the singer\'s cue from the return channel 5: CUE ON, pre-fader (POST off). Raise ST CUE A and check it with its AFL. On F/B A press CUE A, raise LEVEL and check it with AFL too. The vocal must reach headphones A.',
+    h:'CH 5: CUE ON. Centre: ST CUE A up, AFL on and off. F/B A: CUE A, LEVEL up, AFL on and off. Live room: HP A level up.',
+    ok:R=>S.ch[4].cueOn&&!S.ch[4].cuePost&&!S.ch[0].cueOn&&S.c.fbA.cue&&has(R.D.pha,'Vocal')&&TK.tr.cueAfl&&TK.tr.fbAfl},
+  click:{t:'Click in the cue only',steps:['plug','gain','recBus','dawIn','dawRet','cue'],
+    p:'Switch on the DAW click (output 8) and press PLAY. Bring it back on channel 8 (FLIP) and send it to the cue only: CUE ON, MIX off. Check the cue with AFL on F/B A: the singer hears the click, the recording does not.',
+    h:'DAW tab: CLICK, output 8, PLAY. CH 8: FLIP, CUE ON, keep MIX off. F/B A: AFL.',
+    ok:R=>S.daw.click.on&&S.daw.play&&has(R.D.pha,'Click')&&!has(R.F.mixo.sigs,'Click')&&TK.tr.clickAfl,
+    bad:R=>has(R.F.mixo.sigs,'Click')?'The click is on the MIX bus: it would end up in the mix. Take MIX off on its channel.':''},
+  'trk-bus':{t:'Two channels onto track bus 1 into DAW 7',steps:['plug','gain','snare-on'],
+    p:'Combine the vocal (CH 1) and the snare (CH 2) on track bus 1: press 1 on both channels with their faders at 0 dB (the track buses are fed after the fader), raise BUS 1 on the track bus masters, and patch Track bus 1 out to DAW in 7 on the patchbay.',
+    h:'Routing 1 on CH 1 and CH 2, both faders to 0.0. TRACK BUS MASTERS: BUS 1 up. Patchbay: Track bus out 1 → DAW inputs 7.',
+    ok:R=>has(R.D.dawi[6],'Vocal')&&has(R.D.dawi[6],'Snare')&&cable('tb1','dawi7')},
+};
+STEP['snare-off']=()=>STEP.snare(false); STEP['snare-on']=()=>STEP.snare(true);
+function taskTrack(R){
+  const T=TK.tr, c=S.ch[0], P=TK.prev||{};
+  if(S.room[0].plug&&!P.plug&&c.phantom) T.plug48=true;
+  if(!S.room[0].plug&&!c.phantom) T.plug48=false; // unplugged with 48V off: start again
+  if(c.phantom&&!P.ph&&c.gain>15&&TASK==='gain') T.late48=true;
+  if(TASK==='gain'&&!c.phantom&&c.gain<=15) T.late48=false;
+  if(A.rec&&!A.rec.done&&S.c.mon==='mix'&&has(R.D.mon,'Vocal')&&!R.D.anySolo) T.offTape=true;
+  if(S.c.cueA.afl&&has(R.F.cuea.sigs,'Vocal')) T.cueAfl=true;
+  if(S.c.fbA.afl&&has(R.F.fba.sigs,'Vocal')) T.fbAfl=true;
+  if(S.c.fbA.afl&&has(R.D.solo,'Click')) T.clickAfl=true;
+  TK.prev={plug:S.room[0].plug,ph:c.phantom};
+}
+function drawTask(R){
+  const T=TASKS[TASK]; if(!T) return; taskTrack(R);
+  const ok=!!T.ok(R), bad=T.bad?T.bad(R):'';
+  $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':bad?'Fix this first':'In progress';
+  $('taskbad').textContent=bad; $('taskbad').hidden=!bad;
+  if(ok&&!TK.done){ TK.done=true; tell({type:'task',task:TASK,done:true}); }
+}
+if(TASK&&TASKS[TASK]){
+  const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); TK.done=false;
+  const bar=document.createElement('section'); bar.className='taskbar'; bar.setAttribute('aria-label','Task');
+  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><p class="taskbad" id="taskbad" hidden></p><details><summary>Hint</summary>${T.h}</details>`;
+  document.querySelector('.tabs').before(bar);
+  const _render=render; render=function(){ _render(); drawTask(LAST); };
+}
+if(QS.get('exam')){ $('exStart').click(); setTimeout(()=>showView('exam'),0); }
+$('exStop').addEventListener('click',()=>{ let auto=0,autoMax=0,tot=0; EXB.forEach(([q,n,fn],k)=>{ const isT=fn(LAST)===T; if(!isT){ autoMax++; auto+=EXAM.best[k]||0; } tot+=(isT?EXAM.tutor[k]:EXAM.best[k])||0; });
+  tell({type:'exam',auto,autoMax,total:tot,max:EXB.length}); });
+
+render();
+showView(location.hash.slice(1)||'console');
+})();
+</script>

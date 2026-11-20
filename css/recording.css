@@ -1,0 +1,27 @@
+/* Recording course additions on top of the shared app.css */
+.rec-lesson { display: flex; flex-direction: column; gap: 14px; }
+.rec-lesson h1 { margin: 0; text-wrap: balance; }
+.rec-lesson .lead { margin: 0; max-width: 70ch; }
+.rec-video { display: flex; flex-direction: column; gap: 4px; max-width: 900px; }
+.rec-video iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; background: #000; }
+.rec-video.short iframe { aspect-ratio: 9 / 16; max-width: 340px; }
+.rec-exercises { display: flex; flex-direction: column; gap: 12px; max-width: 900px; }
+.card.ex.done { border-color: color-mix(in srgb, currentColor 20%, transparent); }
+.ex-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ex-state { font-weight: 700; color: #2f8a4e; }
+.card.ex h2 { margin: 4px 0 10px; font-size: 1.15rem; }
+.quiz { display: flex; flex-direction: column; gap: 12px; }
+.quiz .q { border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: 8px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.quiz .q legend { font-weight: 600; padding: 0 4px; }
+.quiz .q.right { border-color: #2f8a4e; background: color-mix(in srgb, #2f8a4e 8%, transparent); }
+.quiz .q.wrong { border-color: #c8352b; background: color-mix(in srgb, #c8352b 8%, transparent); }
+.quiz .opt { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.quiz .q .btn { align-self: flex-start; }
+.deskwrap { display: flex; flex-direction: column; gap: 8px; }
+.deskhead { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.deskhead strong { margin-right: auto; }
+.deskwrap iframe { width: 100%; height: 88vh; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 10px; background: #fff; }
+.gate h2 { margin-top: 0; }
+.gate input { padding: 8px 10px; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); font: inherit; min-width: 0; }
+.lesson-nav { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.lesson-nav .btn { max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
