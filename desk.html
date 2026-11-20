@@ -293,6 +293,9 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .taskst{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--led-off);border:1px solid var(--line);white-space:nowrap}
 .taskst.ok{background:var(--led-green);color:#fff;border-color:transparent} .taskst.bad{background:var(--led-red);color:#fff;border-color:transparent}
 .taskbad{color:var(--led-red);font-weight:600}
+.taskchk{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:3px 14px;font-size:13px}
+.taskchk li{color:var(--muted)} .taskchk li span{display:inline-block;width:16px;font-weight:700}
+.taskchk li.y{color:var(--ink)} .taskchk li.y span{color:var(--led-green)}
 .taskok{background:var(--led-green);color:#fff;font-weight:700;padding:8px 12px;border-radius:8px}
 .taskbar.done{border-color:var(--led-green)}
 .exambar{display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-weight:600}
@@ -1815,7 +1818,7 @@ const TASKS={
   'rec-bus':{t:'Send the vocal to the REC bus',steps:['plug','gain'],
     p:'Assign channel 1 to the REC bus, set its fader to 0 dB, then on REC / MIX bus functions select REC and raise the master fader until the REC VU meters move (metering stage 3).',
     h:'CH 1: REC (red) and fader to 0.0. Master section: REC, then raise the fader. The REC BUS VU is in the meter bridge.',
-    ok:R=>S.ch[0].rec&&Math.abs(S.ch[0].fader-75)<=3&&has(R.F.reco.sigs,'Vocal')},
+    ok:R=>S.ch[0].rec&&nearUnity(S.ch[0].fader)&&has(R.F.reco.sigs,'Vocal')},
   monitor:{t:'Hear the REC bus in the control room',steps:['plug','gain','recBus'],
     p:'Choose REC as the monitor source, check the MONITOR meter in the bridge (metering stage 4), then raise the monitor level with the speakers uncut.',
     h:'Centre section, MONITOR: REC, then MONITOR LEVEL up and CUT off.',
@@ -1851,6 +1854,25 @@ const TASKS={
     ok:R=>has(R.D.dawi[6],'Vocal')&&has(R.D.dawi[6],'Snare')&&cable('tb1','dawi7')},
 };
 STEP['snare-off']=()=>STEP.snare(false); STEP['snare-on']=()=>STEP.snare(true);
+// Live checklist for each task: every line ticks when that step is right; the task is done when all are.
+const nearUnity=f=>Math.abs((f-75)*0.4)<=2;      // within ±2 dB of 0 dB
+const fdb=f=>' (now '+dB(f)+' dB)';
+const spkUp=()=>S.c.monLvl>0&&!S.c.mcut;
+const CHK={
+  plug:R=>[['Plugged in with CH 1 48V off',!TK.tr.plug48],['Vocal mic plugged into wall box 1',S.room[0].plug],['Headphone amp on',S.hp.on],['Headphones A plugged in by the stand',S.hp.plugA]],
+  talkback:R=>[['Talkback level (TB TO F/B) up',S.c.tb.lvl>0],['TB ALL or F/B A pressed',S.c.tb.all||S.c.tb.fba],['F/B A LEVEL up',S.c.fbA.lvl>0&&!S.c.fbA.cut],['Headphone amp on, HP A level up',S.hp.on&&S.hp.a>0],['Talkback reaches headphones A',has(R.D.pha,'Talkback')]],
+  gain:R=>{ const L=ch(0).chLvl; return [['Input on MIC (FLIP off)',!S.ch[0].flip],['48V on, before raising the gain',S.ch[0].phantom&&!TK.tr.late48],['Channel meter between −6 and +6 dB'+(L===null?' (no signal yet)':' (now '+(L>0?'+':'')+L+' dB)'),L!==null&&L>=-6&&L<=6]]; },
+  'rec-bus':R=>[['CH 1 assigned to REC',S.ch[0].rec],['CH 1 fader at 0 dB, ±2'+fdb(S.ch[0].fader),nearUnity(S.ch[0].fader)],['Master fader set to REC (REC / MIX bus)',S.c.mfSel==='rec'],['REC master fader up'+fdb(S.c.recMaster),S.c.recMaster>0],['Vocal on the REC bus VU meters (stage 3)',has(R.F.reco.sigs,'Vocal')]],
+  monitor:R=>[['Monitor source: REC',S.c.mon==='rec'],['Nothing soloed or on AFL',!R.D.anySolo],['Vocal on the MONITOR meter (stage 4)',S.c.mon==='rec'&&has(R.D.mon,'Vocal')],['Monitor level up',S.c.monLvl>0],['Speakers not cut',!S.c.mcut]],
+  'daw-in':R=>[['Track 1 input: IN 1',S.daw.tr[0].inp===1],['Track 1 input monitoring (IN) or armed (REC)',R.D.dawTr[0].monOn],['Vocal on track 1 meter (stage 2)',R.D.dawTr[0].monOn&&has(R.D.dawTr[0].inS,'Vocal')]],
+  'daw-return':R=>[['Track 1 output: OUT 5',S.daw.tr[0].out===5],['CH 5 FLIP (line input)',S.ch[4].flip],['CH 5 on MIX',S.ch[4].mix],['CH 5 fader up'+fdb(S.ch[4].fader),S.ch[4].fader>0],['Master fader set to MIX and up',S.c.mfSel==='mix'&&S.c.master>0],['Vocal on the MIX bus VU',has(R.F.mixo.sigs,'Vocal')],['Monitor source: MIX, speakers up',S.c.mon==='mix'&&spkUp()],['Vocal heard off-tape',S.c.mon==='mix'&&has(R.D.mon,'Vocal')]],
+  record:R=>[['Audio started (▶ Start audio)',!!A.on],['Track 1 armed or recorded',S.daw.tr[0].arm||!!(S.daw.tr[0].take&&S.daw.tr[0].take.kind==='buf')],['Listening to MIX (off-tape) while recording',!!TK.tr.offTape],['A take of the vocal on track 1',!!(S.daw.tr[0].take&&S.daw.tr[0].take.kind==='buf'&&has(S.daw.tr[0].take.sigs,'Vocal (DAW)'))]],
+  trouble:R=>[['Fault found and fixed at the source',S.room[1].plug],['Snare on channel 2',has(ch(1).chIn,'Snare')],['Snare on the REC bus',has(R.F.reco.sigs,'Snare')]],
+  cue:R=>[['CH 5 CUE ON',S.ch[4].cueOn],['Cue pre-fader (POST off)',S.ch[4].cueOn&&!S.ch[4].cuePost],['Cue from the return (CH 1 cue off)',!S.ch[0].cueOn],['ST CUE A up',S.c.cueA.lvl>0],['ST CUE A checked with AFL',!!TK.tr.cueAfl],['F/B A: CUE A on, LEVEL up',S.c.fbA.cue&&S.c.fbA.lvl>0],['F/B A checked with AFL',!!TK.tr.fbAfl],['Vocal in headphones A',has(R.D.pha,'Vocal')]],
+  click:R=>{ const k=S.daw.click.out-1; return [['DAW CLICK on, output 8',S.daw.click.on&&S.daw.click.out===8],['DAW playing',S.daw.play],['CH 8 FLIP (line input)',S.ch[7].flip],['CH 8 CUE ON',S.ch[7].cueOn],['Click NOT on the MIX bus',!has(R.F.mixo.sigs,'Click')],['Click checked with AFL on F/B A',!!TK.tr.clickAfl],['Click in headphones A',has(R.D.pha,'Click')]]; },
+  'trk-bus':R=>[['CH 1 on track bus 1',S.ch[0].trk.includes(1)],['CH 2 on track bus 1',S.ch[1].trk.includes(1)],['Both faders up',S.ch[0].fader>0&&S.ch[1].fader>0],['BUS 1 master up',S.c.trkM[0].lvl>0],['Patched: Track bus 1 out → DAW in 7',cable('tb1','dawi7')],['Vocal and snare at DAW in 7',has(R.D.dawi[6],'Vocal')&&has(R.D.dawi[6],'Snare')]],
+};
+
 function taskTrack(R){
   const T=TK.tr, c=S.ch[0], P=TK.prev||{};
   if(S.room[0].plug&&!P.plug&&c.phantom) T.plug48=true;
@@ -1865,7 +1887,8 @@ function taskTrack(R){
 }
 function drawTask(R){
   const T=TASKS[TASK]; if(!T) return; taskTrack(R);
-  const ok=!!T.ok(R), bad=T.bad?T.bad(R):'';
+  const list=CHK[TASK]?CHK[TASK](R):[], bad=T.bad?T.bad(R):'', ok=!bad&&(list.length?list.every(x=>x[1]):!!T.ok(R));
+  $('taskchk').innerHTML=list.map(([l,v])=>`<li class="${v?'y':''}"><span aria-hidden="true">${v?'✓':'○'}</span> ${l}</li>`).join('');
   $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':bad?'Fix this first':'In progress';
   $('taskbad').textContent=bad; $('taskbad').hidden=!bad; $('taskok').hidden=!ok;
   if(!EMBED) $('taskok').textContent='✓ Task done. Go back to your lesson for the next task, or keep exploring.';
@@ -1875,7 +1898,7 @@ function drawTask(R){
 if(TASK&&TASKS[TASK]){
   const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); TK.done=false;
   const bar=document.createElement('section'); bar.className='taskbar'; bar.setAttribute('aria-label','Task');
-  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden>✓ Task done: it is ticked off in your lesson. Close the desk and go on to the next task, or keep exploring.</p><details><summary>Hint</summary>${T.h}</details>`;
+  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><ul class="taskchk" id="taskchk" aria-label="Steps"></ul><p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden>✓ Task done: it is ticked off in your lesson. Close the desk and go on to the next task, or keep exploring.</p><details><summary>Hint</summary>${T.h}</details>`;
   document.querySelector('.tabs').before(bar);
   const _render=render; render=function(){ _render(); drawTask(LAST); };
 }
