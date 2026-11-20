@@ -1,10 +1,10 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200111';
-import { findLesson } from './lessons.js?v=202611200111';
-import { h, store, toast } from './util.js?v=202611200111';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200111';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200113';
+import { findLesson } from './lessons.js?v=202611200113';
+import { h, store, toast } from './util.js?v=202611200113';
+import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200113';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
