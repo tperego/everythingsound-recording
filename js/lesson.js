@@ -1,10 +1,10 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200135';
-import { findLesson } from './lessons.js?v=202611200135';
-import { h, store, toast } from './util.js?v=202611200135';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200135';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200136';
+import { findLesson } from './lessons.js?v=202611200136';
+import { h, store, toast } from './util.js?v=202611200136';
+import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200136';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -124,6 +124,7 @@ function deskDone(text) {
 window.addEventListener('message', (e) => {
   if (e.origin !== location.origin || e.data?.source !== 'es-desk' || !openTask) return;
   const ex = openTask, d = e.data;
+  if (d.type === 'close') { closeDesk(true); return; }
   if (d.type === 'task' && ex.kind === 'desk' && d.task === ex.task) { mark(ex, 'desk-task', `${lesson.id}/${ex.task}`); deskDone(`✓ Done: ${ex.title}.`); }
   if (d.type === 'exam' && ex.kind === 'exam') {
     lastExam = { auto: d.auto, autoMax: d.autoMax, total: d.total, max: d.max, at: Date.now() };

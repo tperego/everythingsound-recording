@@ -297,7 +297,9 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .taskchk{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:3px 14px;font-size:13px}
 .taskchk li{color:var(--muted)} .taskchk li span{display:inline-block;width:16px;font-weight:700}
 .taskchk li.y{color:var(--ink)} .taskchk li.y span{color:var(--led-green)}
-.taskok{background:var(--led-green);color:#fff;font-weight:700;padding:8px 12px;border-radius:8px}
+.taskok{background:var(--led-green);color:#fff;font-weight:700;padding:8px 12px;border-radius:8px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.taskok[hidden]{display:none}
+.taskok .b{flex:0 0 auto;padding:6px 12px;background:#fff;color:#1d3a26;border-color:transparent}
 .taskbar.done{border-color:var(--led-green)}
 .exambar{display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-weight:600}
 .exambar .b{flex:0 0 auto;padding:4px 10px}
@@ -1893,14 +1895,16 @@ function drawTask(R){
   $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':bad?'Fix this first':'In progress';
   $('taskbad').textContent=bad; $('taskbad').hidden=!bad; $('taskok').hidden=!ok;
   if(!EMBED) $('taskok').textContent='✓ Task done. Go back to your lesson for the next task, or keep exploring.';
+  if(ok&&!TK.shownOk){ TK.shownOk=true; document.querySelector('.taskbar').scrollIntoView({behavior:'smooth',block:'start'}); }
   document.querySelector('.taskbar').classList.toggle('done',ok);
   if(ok&&!TK.done){ TK.done=true; tell({type:'task',task:TASK,done:true}); }
 }
 if(TASK&&TASKS[TASK]){
   const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); TK.done=false;
   const bar=document.createElement('section'); bar.className='taskbar'; bar.setAttribute('aria-label','Task');
-  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><ul class="taskchk" id="taskchk" aria-label="Steps"></ul><p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden>✓ Task done: it is ticked off in your lesson. Close the desk and go on to the next task, or keep exploring.</p><details><summary>Hint</summary>${T.h}</details>`;
+  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><ul class="taskchk" id="taskchk" aria-label="Steps"></ul><p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden><span>✓ Task done: it is ticked off in your lesson.</span>${EMBED?'<button class="b" id="taskclose" type="button">Close the desk and continue →</button>':''}</p><details><summary>Hint</summary>${T.h}</details>`;
   document.querySelector('.tabs').before(bar);
+  bar.addEventListener('click',e=>{ if(e.target.id==='taskclose') tell({type:'close'}); });
   const _render=render; render=function(){ _render(); drawTask(LAST); };
 }
 // From a lesson (a task or the exam): the trainer's own free-practice exercises would only confuse, so hide them.
