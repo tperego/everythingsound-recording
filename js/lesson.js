@@ -1,10 +1,10 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200125';
-import { findLesson } from './lessons.js?v=202611200125';
-import { h, store, toast } from './util.js?v=202611200125';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200125';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200135';
+import { findLesson } from './lessons.js?v=202611200135';
+import { h, store, toast } from './util.js?v=202611200135';
+import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200135';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -97,22 +97,42 @@ function openDesk(ex, url) {
   openTask = ex;
   $('#desktitle').textContent = ex.title;
   $('#desk').src = url; $('#deskpop').href = url;
-  $('#deskwrap').hidden = false;
+  $('#deskwrap').hidden = false; $('#deskdone').hidden = true;
   $('#deskwrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-$('#deskclose').onclick = () => { $('#deskwrap').hidden = true; $('#desk').src = 'about:blank'; openTask = null; };
+function closeDesk(goNext = false) {
+  const ex = openTask;
+  $('#deskwrap').hidden = true; $('#desk').src = 'about:blank'; openTask = null;
+  if (!goNext) return;
+  // Scroll to the next exercise not done yet, or to the lesson navigation when all are done.
+  const i = lesson.exercises.indexOf(ex);
+  const next = lesson.exercises.findIndex((e, k) => k > i && status()[e.id] !== 'passed');
+  const target = next >= 0 ? document.querySelectorAll('#exercises .card.ex')[next] : $('#lesson-nav-bottom');
+  target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+$('#deskclose').onclick = () => closeDesk(false);
+$('#deskdone-btn').onclick = () => closeDesk(true);
+// Done: a clear reminder above the desk to close it and carry on.
+function deskDone(text) {
+  const left = lesson.exercises.filter((e) => status()[e.id] !== 'passed').length;
+  $('#deskdone-text').textContent = text + (left ? ` Close the desk to continue with the next exercise.` : ' That was the last one in this lesson: close the desk to continue.');
+  $('#deskdone-btn').textContent = left ? 'Close the desk and continue →' : 'Close the desk: lesson complete';
+  $('#deskdone').hidden = false;
+  $('#deskdone').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 window.addEventListener('message', (e) => {
   if (e.origin !== location.origin || e.data?.source !== 'es-desk' || !openTask) return;
   const ex = openTask, d = e.data;
-  if (d.type === 'task' && ex.kind === 'desk' && d.task === ex.task) { toast(`Done: ${ex.title}`); mark(ex, 'desk-task', `${lesson.id}/${ex.task}`); }
+  if (d.type === 'task' && ex.kind === 'desk' && d.task === ex.task) { mark(ex, 'desk-task', `${lesson.id}/${ex.task}`); deskDone(`✓ Done: ${ex.title}.`); }
   if (d.type === 'exam' && ex.kind === 'exam') {
     lastExam = { auto: d.auto, autoMax: d.autoMax, total: d.total, max: d.max, at: Date.now() };
     store.set(`es.exam.${lesson.id}`, lastExam);
     if (d.autoMax && d.auto / d.autoMax >= 0.7) {
       mark(ex, 'exam-pass', `${lesson.id}/exam`);
       if (d.auto === d.autoMax) awardXp('exam-perfect', `${lesson.id}/exam`);
-    } else draw();
+      deskDone(`✓ Exam passed: ${d.auto} / ${d.autoMax} simulator blocks.`);
+    } else { draw(); deskDone(`Exam ended: ${d.auto} / ${d.autoMax} simulator blocks (70% to pass). Have another go when you are ready.`); }
   }
 });
 

@@ -27,3 +27,5 @@
 .lesson-nav .btn { max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vparts { display: flex; gap: 6px; flex-wrap: wrap; }
 .vparts .btn { max-width: 100%; white-space: normal; text-align: left; }
+.deskdone { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 14px; border-radius: 10px; background: #2f8a4e; color: #fff; font-weight: 700; }
+.deskdone .btn { background: #fff; color: #1d3a26; border-color: transparent; }
