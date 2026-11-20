@@ -1,9 +1,9 @@
 // Course home: modules, lessons, progress, and a way back into where the student left off.
 
-import { COURSE, courseLessons, lessonProgress } from './course.js?v=202611200035';
-import { h, store } from './util.js?v=202611200035';
-import { myProfile, myProgress, myXpEvents, renderAccountWidget } from './auth.js?v=202611200035';
-import { journeyStrip, summarise } from './game.js?v=202611200035';
+import { COURSE, courseLessons, lessonProgress } from './course.js?v=202611200104';
+import { h, store } from './util.js?v=202611200104';
+import { myProfile, myProgress, myXpEvents, renderAccountWidget } from './auth.js?v=202611200104';
+import { journeyStrip, summarise } from './game.js?v=202611200104';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -29,7 +29,7 @@ $('#modules').replaceChildren(...COURSE.modules.map((m, mi) => h('section', { cl
         h('span', { class: 'lesson-num' }, String(n)),
         h('span', { class: 'lesson-text' },
           h('strong', {}, l.title),
-          h('span', { class: 'muted small' }, [l.youtubeId ? (l.short ? 'short video' : 'video') : '', l.exercises.length ? `${l.exercises.length} exercise${l.exercises.length === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ') + (mi === 0 ? ' · free' : ''))),
+          h('span', { class: 'muted small' }, [l.videos.length ? `${l.videos.length} video${l.videos.length === 1 ? '' : 's'}` : '', l.exercises.length ? `${l.exercises.length} exercise${l.exercises.length === 1 ? '' : 's'}` : ''].filter(Boolean).join(' · ') + (mi === 0 ? ' · free' : ''))),
         h('span', { class: `lesson-progress ${state}` },
           state === 'done' ? '✓ Done' : state === 'started' ? `${pr.done} / ${pr.total}` : 'Start')));
   })))));

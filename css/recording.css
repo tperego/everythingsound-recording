@@ -25,3 +25,5 @@
 .gate input { padding: 8px 10px; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); font: inherit; min-width: 0; }
 .lesson-nav { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .lesson-nav .btn { max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vparts { display: flex; gap: 6px; flex-wrap: wrap; }
+.vparts .btn { max-width: 100%; white-space: normal; text-align: left; }

@@ -1,7 +1,7 @@
 // The Recording course: modules in order, each listing lesson ids from js/lessons.js.
 
-import { LESSONS, findLesson } from './lessons.js?v=202611200035';
-import { store } from './util.js?v=202611200035';
+import { LESSONS, findLesson } from './lessons.js?v=202611200104';
+import { store } from './util.js?v=202611200104';
 
 export const COURSE = {
   id: 'recording',
@@ -16,15 +16,15 @@ export const COURSE = {
   ],
   modules: [
     { title: 'The live room', intro: 'Cables, stands, mics, the tie box and talking between rooms: everything before the signal reaches the desk.',
-      lessons: ['rec-01-live-room', 'rec-02-coiling', 'rec-03-stands', 'rec-04-mic-handling', 'rec-05-tie-box', 'rec-06-laying-cables', 'rec-07-comms'] },
+      lessons: ['rec-01-cables', 'rec-02-stands-mics', 'rec-03-tie-box'] },
     { title: 'Control room signal flow', intro: 'Gain staging, the four metering stages, Pro Tools in and out, confidence monitoring, cues, foldback, the patchbay and the exam.',
-      lessons: ['rec-08-control-room', 'rec-09-gain-staging', 'rec-10-metering', 'rec-11-daw-setup', 'rec-12-daw-flow', 'rec-13-recording-pt', 'rec-14-troubleshooting', 'rec-15-cues', 'rec-16-foldback', 'rec-17-headphones', 'rec-18-track-buses', 'rec-19-exam'] },
+      lessons: ['rec-04-gain-staging', 'rec-05-metering', 'rec-06-pro-tools', 'rec-07-troubleshooting', 'rec-08-cues', 'rec-09-patchbay', 'rec-10-exam'] },
     { title: 'Microphones', intro: 'Mic types, the classics, polar patterns, stereo techniques and drum set-ups. Exercises with the mic simulator are on the way.',
-      lessons: ['rec-20-mics-1', 'rec-21-mics-2', 'rec-22-mics-3', 'rec-23-polar', 'rec-24-stereo', 'rec-25-drums-12', 'rec-26-drums-3'] },
+      lessons: ['rec-11-mics', 'rec-12-polar', 'rec-13-stereo', 'rec-14-drums'] },
     { title: 'Pro Tools', intro: 'Basic operations, guide tracks, editing, comping, templates and automation.',
-      lessons: ['rec-27-pt-basics', 'rec-28-guide', 'rec-29-edits', 'rec-30-comping', 'rec-31-comping-2', 'rec-32-template', 'rec-33-automation'] },
+      lessons: ['rec-15-pt-basics', 'rec-16-guide', 'rec-17-edits', 'rec-18-comping', 'rec-19-template'] },
     { title: 'Mixing on the console', intro: 'Dynamics and EQ on the desk, outboard reverb and compression, printing and exporting the mix.',
-      lessons: ['rec-34-dyn-eq', 'rec-35-outboard', 'rec-36-print', 'rec-37-print-quick', 'rec-38-export', 'rec-39-atmos'] },
+      lessons: ['rec-20-dyn-eq', 'rec-21-outboard', 'rec-22-print', 'rec-23-atmos'] },
   ],
   // Level names for this course's own XP (parallel to Music Theory's).
   levels: [

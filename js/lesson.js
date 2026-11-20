@@ -1,10 +1,10 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200035';
-import { findLesson } from './lessons.js?v=202611200035';
-import { h, store, toast } from './util.js?v=202611200035';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200035';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200104';
+import { findLesson } from './lessons.js?v=202611200104';
+import { h, store, toast } from './util.js?v=202611200104';
+import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200104';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -24,16 +24,25 @@ const navLink = (l, label) => l ? h('a', { class: 'btn small', href: `lesson.htm
 for (const id of ['#lesson-nav', '#lesson-nav-bottom']) $(id).replaceChildren(navLink(nb.prev, `← ${nb.prev?.title || ''}`), h('a', { class: 'btn small ghost', href: 'index.html' }, 'All lessons'), navLink(nb.next, `${nb.next?.title || ''} →`));
 
 // ---------- video ----------
-function setVideo(at = 0) {
-  if (!lesson.youtubeId) { $('#video').hidden = true; return; }
+// A lesson can have several videos: buttons switch between them ("Video 1 of 3: …").
+let curV = 0;
+function setVideo(v = 0, at = 0, play = false) {
+  const vids = lesson.videos || [];
+  if (!vids.length) { $('#video').hidden = true; return; }
+  curV = v; const vid = vids[v];
   const q = new URLSearchParams({ rel: '0', modestbranding: '1', start: String(Math.floor(at)) });
-  if (at) q.set('autoplay', '1');
-  $('#video').classList.toggle('short', !!lesson.short);
-  $('#video').replaceChildren(h('iframe', { src: `https://www.youtube-nocookie.com/embed/${lesson.youtubeId}?${q}`, title: lesson.title, allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen', allowfullscreen: true, loading: 'lazy' }),
-    h('a', { class: 'muted small', href: `https://www.youtube.com/watch?v=${lesson.youtubeId}`, target: '_blank', rel: 'noopener' }, 'Watch on YouTube'));
+  if (play) q.set('autoplay', '1');
+  $('#video').classList.toggle('short', !!vid.short);
+  const parts = vids.length > 1 ? h('div', { class: 'vparts', role: 'group', 'aria-label': 'Videos in this lesson' }, vids.map((x, i) =>
+    h('button', { type: 'button', class: `btn small${i === v ? ' primary' : ''}`, 'aria-pressed': String(i === v), onclick: () => setVideo(i) }, `${i + 1}. ${x.title}`))) : '';
+  $('#video').replaceChildren(parts,
+    h('iframe', { src: `https://www.youtube-nocookie.com/embed/${vid.id}?${q}`, title: vid.title, allow: 'autoplay; encrypted-media; picture-in-picture; fullscreen', allowfullscreen: true, loading: 'lazy' }),
+    h('a', { class: 'muted small', href: `https://www.youtube.com/watch?v=${vid.id}`, target: '_blank', rel: 'noopener' }, 'Watch on YouTube'));
 }
 setVideo();
-const watchPart = (at) => h('button', { type: 'button', class: 'btn small ghost', onclick: () => { setVideo(at); $('#video').scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, `▶ Watch this part (${Math.floor(at / 60)}:${String(Math.floor(at % 60)).padStart(2, '0')})`);
+const mmss = (at) => `${Math.floor(at / 60)}:${String(Math.floor(at % 60)).padStart(2, '0')}`;
+const watchPart = (at, v = 0) => h('button', { type: 'button', class: 'btn small ghost', onclick: () => { setVideo(v, at || 0, true); $('#video').scrollIntoView({ behavior: 'smooth', block: 'center' }); } },
+  (lesson.videos.length > 1 ? `▶ Watch: ${lesson.videos[v].title}` : '▶ Watch this part') + (at ? ` (${mmss(at)})` : ''));
 
 // ---------- progress and XP ----------
 function mark(ex, kind, ref) {
@@ -53,7 +62,7 @@ function quizCard(ex) {
   const form = h('form', { class: 'quiz' }, ex.questions.map((q, qi) => h('fieldset', { class: 'q', id: `q-${ex.id}-${qi}` },
     h('legend', {}, `${qi + 1}. ${q.q}`),
     ...q.a.map((a, ai) => h('label', { class: 'opt' }, h('input', { type: 'radio', name: `q${qi}`, value: String(ai), checked: done && ai === q.ok }), h('span', {}, a))),
-    q.at != null ? watchPart(q.at) : '')),
+    q.at != null || q.v != null ? watchPart(q.at, q.v || 0) : '')),
     h('div', { class: 'row' }, h('button', { type: 'submit', class: 'btn primary' }, 'Check my answers'), h('span', { class: 'qres muted', role: 'status' })));
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -73,7 +82,7 @@ function deskCard(ex) {
   const open = () => openDesk(ex, `desk.html?task=${encodeURIComponent(ex.task)}#console`);
   return h('div', { class: 'row wrap' },
     h('button', { type: 'button', class: 'btn primary', onclick: open }, status()[ex.id] === 'passed' ? 'Do it again on the desk' : 'Open on the desk'),
-    ex.at != null ? watchPart(ex.at) : '');
+    ex.at != null || ex.v != null ? watchPart(ex.at, ex.v || 0) : '');
 }
 
 let lastExam = store.get(`es.exam.${lesson.id}`, null);
