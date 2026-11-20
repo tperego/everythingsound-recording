@@ -36,6 +36,7 @@ button{font-family:var(--font)}
 .tab{border:1px solid transparent;border-bottom:none;background:none;color:var(--muted);padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer;border-radius:8px 8px 0 0;margin-bottom:-1px;white-space:nowrap}
 .tab[aria-selected="true"]{background:var(--bg);color:var(--ink);border-color:var(--line);border-bottom:1px solid var(--bg)}
 .view{display:flex;flex-direction:column;gap:16px}
+.grid2.one{grid-template-columns:1fr}
 /* Hidden tabs and panels stay hidden on any host (the artifact viewer adds this; a plain website does not). */
 [hidden]{display:none!important}
 .tip{background:var(--panel-2);border-radius:8px;padding:8px 12px;min-height:40px;display:flex;gap:10px;align-items:center}
@@ -419,7 +420,7 @@ button.sc{cursor:pointer;width:100%}
         <div class="card-h"><h2>Where the signal ends up</h2><span class="note">Each box is a bus or physical output. Chips show which sources reach it.</span></div>
         <div class="outs" id="outs"></div>
       </section>
-      <section class="card">
+      <section class="card" id="excard">
         <div class="card-h"><h2>Exercises</h2><span class="progress" id="prog"></span></div>
         <div class="ex" id="ex"></div>
       </section>
@@ -1902,6 +1903,8 @@ if(TASK&&TASKS[TASK]){
   document.querySelector('.tabs').before(bar);
   const _render=render; render=function(){ _render(); drawTask(LAST); };
 }
+// From a lesson (a task or the exam): the trainer's own free-practice exercises would only confuse, so hide them.
+if(TASK||QS.get('exam')){ $('excard').hidden=true; $('excard').parentElement.classList.add('one'); }
 if(QS.get('exam')){ $('exStart').click(); setTimeout(()=>showView('exam'),0); }
 $('exStop').addEventListener('click',()=>{ let auto=0,autoMax=0,tot=0; EXB.forEach(([q,n,fn],k)=>{ const isT=fn(LAST)===T; if(!isT){ autoMax++; auto+=EXAM.best[k]||0; } tot+=(isT?EXAM.tutor[k]:EXAM.best[k])||0; });
   tell({type:'exam',auto,autoMax,total:tot,max:EXB.length}); });
