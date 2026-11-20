@@ -1,8 +1,8 @@
 // Gamification: levels, streaks and badges, worked out from the student's XP events.
 // XP itself is decided by the database (supabase/game.sql); this file only reads and shows it.
 
-import { COURSE } from './course.js?v=202611200104';
-import { h } from './util.js?v=202611200104';
+import { COURSE } from './course.js?v=202611200111';
+import { h } from './util.js?v=202611200111';
 
 export const LEVELS = COURSE.levels;
 

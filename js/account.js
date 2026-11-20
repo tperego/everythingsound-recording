@@ -1,10 +1,10 @@
 // Account page: sign in / create account, then "My profile": progress, submissions and the teacher's feedback.
 
-import { leaderboard, listPieces, myProfile, myProgress, mySubmissions, myXpEvents, onPasswordRecovery, renderAccountWidget, requestPasswordReset, resendConfirmation, setLeaderboardOptIn, setNewPassword, signIn, signOut, signUp, updateMyName } from './auth.js?v=202611200104';
-import { journeyCard, leaderboardList, summarise } from './game.js?v=202611200104';
-import { COURSE, courseLessons } from './course.js?v=202611200104';
-import { findExercise } from './lessons.js?v=202611200104';
-import { h, store, toast } from './util.js?v=202611200104';
+import { enrolled, joinCourse, leaderboard, listPieces, myProfile, myProgress, mySubmissions, myXpEvents, onPasswordRecovery, renderAccountWidget, requestPasswordReset, resendConfirmation, setLeaderboardOptIn, setNewPassword, signIn, signOut, signUp, updateMyName } from './auth.js?v=202611200111';
+import { journeyCard, leaderboardList, summarise } from './game.js?v=202611200111';
+import { COURSE, courseLessons } from './course.js?v=202611200111';
+import { findExercise } from './lessons.js?v=202611200111';
+import { h, store, toast } from './util.js?v=202611200111';
 
 const main = document.getElementById('main');
 const next = new URLSearchParams(location.search).get('next');
@@ -92,7 +92,7 @@ function renderSignIn(mode = 'signin') {
   main.replaceChildren(h('section', { class: 'card auth-card' },
     h('p', { class: 'eyebrow' }, COURSE.academy),
     h('h1', {}, mode === 'signin' ? 'Sign in' : 'Create your account'),
-    h('p', { class: 'muted' }, 'With an account, your submissions and your teacher’s feedback are kept in your profile, and your desk tasks, exam scores, XP and badges follow you to any computer. New here? Create an account with the class code from your teacher.'),
+    h('p', { class: 'muted' }, 'With an account, your submissions and your teacher’s feedback are kept in your profile, and your desk tasks, exam scores, XP and badges follow you to any computer. Already in Music Theory? Sign in with the same email and password. New here? Create an account with the Recording class code from your teacher.'),
     h('div', { class: 'seg' }, tab('signin', 'Sign in'), tab('signup', 'Create account')),
     mode === 'signin' ? signinForm : signupForm,
     msg,
@@ -179,7 +179,32 @@ function fmtDate(s) {
   return s ? new Date(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 }
 
-async function renderProfile(p) {
+// Signed in (for example with a Music Theory account) but not in this course yet: join with the class code.
+function renderJoin(p) {
+  const status = h('p', { class: 'status', role: 'status' });
+  const f = h('form', { class: 'auth-form' },
+    h('label', { class: 'field' }, 'Recording class code (from your teacher)', h('input', { type: 'text', name: 'code', required: true, autocomplete: 'off' })),
+    h('button', { type: 'submit', class: 'btn primary' }, 'Join the Recording course'), status);
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    status.textContent = 'Checking…';
+    try {
+      const c = await joinCourse(f.code.value.trim());
+      if (c !== COURSE.id) { status.textContent = 'That code is for another course. Ask your teacher for the Recording code.'; return; }
+      toast('Welcome to the Recording course!');
+      if (next) location.href = next; else renderProfile(p, true);
+    } catch (err) { status.textContent = err.message; }
+  });
+  main.replaceChildren(h('section', { class: 'card auth-card' },
+    h('p', { class: 'eyebrow' }, COURSE.academy),
+    h('h1', {}, `Hi ${p.full_name || 'there'}: join Recording`),
+    h('p', { class: 'muted' }, 'You are signed in with your Everything Sound Academy account, but you are not in the Recording and Signal Flow course yet. Enter its class code once: your Music Theory work, XP and badges stay as they are, and Recording gets its own.'),
+    f,
+    h('p', { class: 'muted small' }, 'The Live room module is free without a code: ', h('a', { href: 'index.html' }, 'see the course'), '.')));
+}
+
+async function renderProfile(p, joined = false) {
+  if (!joined && p.role !== 'teacher' && !(await enrolled().catch(() => false))) { renderJoin(p); return; }
   main.replaceChildren(h('p', { class: 'muted' }, 'Loading your work…'));
   let subs = [];
   let progress = null;

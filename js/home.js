@@ -1,9 +1,9 @@
 // Course home: modules, lessons, progress, and a way back into where the student left off.
 
-import { COURSE, courseLessons, lessonProgress } from './course.js?v=202611200104';
-import { h, store } from './util.js?v=202611200104';
-import { myProfile, myProgress, myXpEvents, renderAccountWidget } from './auth.js?v=202611200104';
-import { journeyStrip, summarise } from './game.js?v=202611200104';
+import { COURSE, courseLessons, lessonProgress } from './course.js?v=202611200111';
+import { h, store } from './util.js?v=202611200111';
+import { enrolled, myProfile, myProgress, myXpEvents, renderAccountWidget } from './auth.js?v=202611200111';
+import { journeyStrip, summarise } from './game.js?v=202611200111';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -65,6 +65,12 @@ myProgress().then((remote) => {
 // Signed-in students: level, streak and badges at the top.
 myProfile().then(async (p) => {
   if (!p || p.role === 'teacher') return;
+  if (!(await enrolled().catch(() => false))) {
+    $('#journey-strip').replaceChildren(h('a', { class: 'journey-strip', href: 'account.html' },
+      h('span', { class: 'lvl-badge' }, '+'),
+      h('span', { class: 'journey-text' }, h('strong', {}, 'Join the Recording course'), h('span', { class: 'muted small' }, 'You are signed in with your Academy account. Enter the Recording class code to unlock the desk tasks, the exam, XP and badges.'))));
+    return;
+  }
   const ev = await myXpEvents();
   if (ev) $('#journey-strip').replaceChildren(journeyStrip(summarise(ev)));
 }).catch(() => {});
