@@ -1,12 +1,12 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210134';
-import { findLesson } from './lessons.js?v=202611210134';
-import { h, store, toast } from './util.js?v=202611210134';
-import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611210134';
-import { examSheet, sheetRows, sheetTotals } from './examsheet.js?v=202611210134';
-import { awardXp, awardZen, enrolled, mySubmissions, submitOnline, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210134';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210141';
+import { findLesson } from './lessons.js?v=202611210141';
+import { h, store, toast } from './util.js?v=202611210141';
+import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611210141';
+import { examSheet, sheetRows, sheetTotals } from './examsheet.js?v=202611210141';
+import { awardXp, awardZen, enrolled, mySubmissions, submitOnline, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210141';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
