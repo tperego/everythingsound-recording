@@ -1,10 +1,10 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210011';
-import { findLesson } from './lessons.js?v=202611210011';
-import { h, store, toast } from './util.js?v=202611210011';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210011';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210034';
+import { findLesson } from './lessons.js?v=202611210034';
+import { h, store, toast } from './util.js?v=202611210034';
+import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210034';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -57,6 +57,7 @@ function mark(ex, kind, ref) {
 
 // ---------- exercises ----------
 let openTask = null;
+let teacher = false; // the teacher sees every lesson and stage unlocked, to try them out
 function quizCard(ex) {
   const done = status()[ex.id] === 'passed';
   const form = h('form', { class: 'quiz' }, ex.questions.map((q, qi) => h('fieldset', { class: 'q', id: `q-${ex.id}-${qi}` },
@@ -82,7 +83,7 @@ function quizCard(ex) {
 }
 
 function deskCard(ex) {
-  if (ex.after && status()[ex.after] !== 'passed') {
+  if (ex.after && !teacher && status()[ex.after] !== 'passed') {
     const prev = lesson.exercises.find((e) => e.id === ex.after);
     return h('p', { class: 'muted' }, `🔒 Opens when you pass ${prev ? prev.title.split(' · ')[0] : 'the one before'}.`);
   }
@@ -148,7 +149,7 @@ window.addEventListener('message', (e) => {
 
 // Module 6 opens only when the work before it is done: requires 'all' (every exercise before this lesson) or a lesson id.
 function missing() {
-  if (!lesson.requires) return [];
+  if (!lesson.requires || teacher) return [];
   const all = courseLessons();
   const before = lesson.requires === 'all' ? all.slice(0, all.findIndex((l) => l.id === lesson.id)) : [findLesson(lesson.requires)].filter(Boolean);
   return before.filter((l) => l.exercises.length && lessonProgress(l).done < lessonProgress(l).total);
@@ -168,7 +169,9 @@ function draw() {
     $('#exercises').replaceChildren(h('div', { class: 'card' }, h('p', { class: 'muted' }, 'Exercises for this lesson are on the way. Watch the video, then carry on.')));
     return;
   }
-  $('#exercises').replaceChildren(...lesson.exercises.map((ex, i) => {
+  const note = teacher && (lesson.requires || lesson.exercises.some((e) => e.after))
+    ? h('p', { class: 'muted small' }, 'Teacher preview: everything here is unlocked for you. Students must finish the course first, and pass each stage before the next.') : '';
+  $('#exercises').replaceChildren(note, ...lesson.exercises.map((ex, i) => {
     const done = status()[ex.id] === 'passed';
     return h('section', { class: `card ex ${done ? 'done' : ''}` },
       h('div', { class: 'ex-head' }, h('span', { class: 'eyebrow' }, `${i + 1} · ${{ quiz: 'Questions', desk: 'On the desk', exam: 'Exam' }[ex.kind]}`), h('span', { class: 'ex-state' }, done ? '✓ Done' : '')),
@@ -181,7 +184,8 @@ function draw() {
 async function gate() {
   if (FREE) { draw(); return; }
   const p = await myProfile().catch(() => null);
-  const isIn = p ? await enrolled() : null;
+  teacher = p?.role === 'teacher';
+  const isIn = p ? (teacher || await enrolled()) : null;
   if (isIn) { $('#gate').replaceChildren(); draw(); return; }
   $('#exercises').replaceChildren();
   if (!p) {
