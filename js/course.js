@@ -1,7 +1,7 @@
 // The Recording course: modules in order, each listing lesson ids from js/lessons.js.
 
-import { LESSONS, findLesson } from './lessons.js?v=202611210056';
-import { store } from './util.js?v=202611210056';
+import { LESSONS, findLesson } from './lessons.js?v=202611210112';
+import { store } from './util.js?v=202611210112';
 
 export const COURSE = {
   id: 'recording',

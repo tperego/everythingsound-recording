@@ -2,8 +2,8 @@
 // The URL and publishable key are meant to be public: the database's security rules (supabase/schema.sql)
 // decide what each signed-in person can read or change.
 
-import { h } from './util.js?v=202611210056';
-import { celebrate, summarise, xpChip } from './game.js?v=202611210056';
+import { h } from './util.js?v=202611210112';
+import { celebrate, summarise, xpChip } from './game.js?v=202611210112';
 
 const SUPABASE_URL = 'https://joiozvkdjhgmgrlsbooy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_XA9xQHE9c_juWcnk2V7y5g_hTS0pIIb';
@@ -161,7 +161,7 @@ export async function renderAccountWidget(el) {
     h('a', { class: 'btn small', href: 'chat.html', title: 'Course chat and messages with your teacher' }, '💬 Chat', badge),
     h('a', { class: 'btn small', href: 'account.html', title: 'My profile: your work and your teacher’s feedback' }, `👤 ${p.full_name || 'My profile'}`),
     p.role === 'teacher' ? h('a', { class: 'btn small ghost', href: 'mark.html' }, 'Inbox') : '',
-    p.role === 'teacher' ? h('a', { class: 'btn small ghost', href: 'students.html' }, 'Students') : '',
+    p.role === 'teacher' ? h('a', { class: 'btn small ghost', href: 'https://theory.everythingsoundacademy.com/students.html' }, 'Students') : '',
   );
   if (p.role !== 'teacher') {
     myXpEvents().then((ev) => { if (ev) el.prepend(xpChip(summarise(ev))); }).catch(() => {});

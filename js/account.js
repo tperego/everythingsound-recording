@@ -1,10 +1,10 @@
 // Account page: sign in / create account, then "My profile": progress, submissions and the teacher's feedback.
 
-import { enrolled, joinCourse, leaderboard, listPieces, myProfile, myProgress, mySubmissions, myXpEvents, onPasswordRecovery, renderAccountWidget, requestPasswordReset, resendConfirmation, setLeaderboardOptIn, setNewPassword, signIn, signOut, signUp, updateMyName } from './auth.js?v=202611210056';
-import { journeyCard, leaderboardList, summarise } from './game.js?v=202611210056';
-import { COURSE, courseLessons } from './course.js?v=202611210056';
-import { findExercise } from './lessons.js?v=202611210056';
-import { h, store, toast } from './util.js?v=202611210056';
+import { enrolled, joinCourse, leaderboard, listPieces, myProfile, myProgress, mySubmissions, myXpEvents, onPasswordRecovery, renderAccountWidget, requestPasswordReset, resendConfirmation, setLeaderboardOptIn, setNewPassword, signIn, signOut, signUp, updateMyName } from './auth.js?v=202611210112';
+import { journeyCard, leaderboardList, summarise } from './game.js?v=202611210112';
+import { COURSE, courseLessons } from './course.js?v=202611210112';
+import { findExercise } from './lessons.js?v=202611210112';
+import { h, store, toast } from './util.js?v=202611210112';
 
 const main = document.getElementById('main');
 const next = new URLSearchParams(location.search).get('next');
@@ -226,7 +226,8 @@ async function renderProfile(p, joined = false) {
       h('p', { class: 'muted' }, p.email)),
     h('div', { class: 'row wrap' },
       p.role === 'teacher' ? h('a', { class: 'btn primary', href: 'mark.html' }, 'Open the exam Inbox') : '',
-      p.role === 'teacher' ? h('a', { class: 'btn', href: 'students.html' }, 'Students’ progress and badges') : '',
+      p.role === 'teacher' ? h('a', { class: 'btn', href: 'https://theory.everythingsoundacademy.com/students.html' }, 'Students’ progress (on Music Theory)') : '',
+      h('a', { class: 'btn', href: 'https://theory.everythingsoundacademy.com/account.html' }, '🎼 Music Theory →'),
       h('button', { type: 'button', class: 'btn ghost', onclick: async () => { await signOut(); toast('Signed out.'); render(); } }, 'Sign out')));
 
   // Progress per lesson
