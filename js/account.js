@@ -1,10 +1,10 @@
 // Account page: sign in / create account, then "My profile": progress, submissions and the teacher's feedback.
 
-import { enrolled, joinCourse, leaderboard, listPieces, myProfile, myProgress, mySubmissions, myXpEvents, onPasswordRecovery, renderAccountWidget, requestPasswordReset, resendConfirmation, setLeaderboardOptIn, setNewPassword, signIn, signOut, signUp, updateMyName } from './auth.js?v=202611210048';
-import { journeyCard, leaderboardList, summarise } from './game.js?v=202611210048';
-import { COURSE, courseLessons } from './course.js?v=202611210048';
-import { findExercise } from './lessons.js?v=202611210048';
-import { h, store, toast } from './util.js?v=202611210048';
+import { enrolled, joinCourse, leaderboard, listPieces, myProfile, myProgress, mySubmissions, myXpEvents, onPasswordRecovery, renderAccountWidget, requestPasswordReset, resendConfirmation, setLeaderboardOptIn, setNewPassword, signIn, signOut, signUp, updateMyName } from './auth.js?v=202611210056';
+import { journeyCard, leaderboardList, summarise } from './game.js?v=202611210056';
+import { COURSE, courseLessons } from './course.js?v=202611210056';
+import { findExercise } from './lessons.js?v=202611210056';
+import { h, store, toast } from './util.js?v=202611210056';
 
 const main = document.getElementById('main');
 const next = new URLSearchParams(location.search).get('next');
@@ -225,7 +225,7 @@ async function renderProfile(p, joined = false) {
       h('h1', {}, p.full_name || 'My profile'),
       h('p', { class: 'muted' }, p.email)),
     h('div', { class: 'row wrap' },
-      p.role === 'teacher' ? h('a', { class: 'btn primary', href: 'mark.html' }, 'Open the submissions inbox') : '',
+      p.role === 'teacher' ? h('a', { class: 'btn primary', href: 'mark.html' }, 'Open the exam Inbox') : '',
       p.role === 'teacher' ? h('a', { class: 'btn', href: 'students.html' }, 'Students’ progress and badges') : '',
       h('button', { type: 'button', class: 'btn ghost', onclick: async () => { await signOut(); toast('Signed out.'); render(); } }, 'Sign out')));
 
@@ -259,7 +259,7 @@ async function renderProfile(p, joined = false) {
             : h('span', { class: 'badge' }, 'Waiting for feedback')),
         s.status === 'marked' && s.comment ? h('blockquote', { class: 'comment' }, s.comment) : '',
         h('a', { class: 'btn small', href: `lesson.html?lesson=${encodeURIComponent(s.lesson_id)}&ex=${encodeURIComponent(s.exercise_id)}&submission=${encodeURIComponent(s.id)}` },
-          s.status === 'marked' ? 'See the feedback and my piece' : 'See what I sent'));
+          s.status === 'marked' ? 'See the feedback' : 'See what I sent'));
     }))
     : h('p', { class: 'muted' }, 'Nothing submitted yet. When you submit an exercise, it appears here, and so does your teacher’s feedback.');
 

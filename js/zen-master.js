@@ -1,6 +1,6 @@
 // Maestro Zen, the same Master as in Music Theory: the figure, his slow low voice and his few heavy words.
 
-import { store } from './util.js?v=202611210048';
+import { store } from './util.js?v=202611210056';
 
 export const MASTER_SVG = `<svg viewBox="0 0 160 160" role="img" aria-label="Maestro Zen">
   <circle class="zm-aura" cx="80" cy="78" r="70"/>

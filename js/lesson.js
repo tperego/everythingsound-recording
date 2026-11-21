@@ -1,11 +1,12 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210048';
-import { findLesson } from './lessons.js?v=202611210048';
-import { h, store, toast } from './util.js?v=202611210048';
-import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611210048';
-import { awardXp, awardZen, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210048';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210056';
+import { findLesson } from './lessons.js?v=202611210056';
+import { h, store, toast } from './util.js?v=202611210056';
+import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611210056';
+import { examSheet, sheetRows, sheetTotals } from './examsheet.js?v=202611210056';
+import { awardXp, awardZen, enrolled, mySubmissions, submitOnline, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210056';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -95,11 +96,47 @@ function deskCard(ex) {
 }
 
 let lastExam = store.get(`es.exam.${lesson.id}`, null);
+let myExams = null; // this exam's attempts sent to the tutor (newest first), once loaded
+
+/** A finished exam goes to the tutor's Inbox, like a submission: the tutor marks the blocks the simulator can't see. */
+async function sendExam(ex, d) {
+  if (teacher || !Array.isArray(d.blocks)) return;
+  const p = await myProfile().catch(() => null);
+  if (!p) { toast('Sign in to send your exam to your tutor.'); return; }
+  try {
+    await submitOnline({ lessonId: lesson.id, exerciseId: ex.id, exerciseTitle: ex.title, project: null,
+      answers: { auto: d.auto, autoMax: d.autoMax, total: d.total, max: d.max }, checks: d.blocks, message: '' });
+    toast('Exam sent to your tutor, who marks the blocks the simulator can’t see.');
+    myExams = null; draw();
+  } catch (err) { toast(`Your exam wasn’t sent: ${err.message}`); }
+}
+
+function attemptsBox(ex) {
+  const box = h('div', { class: 'exam-attempts' });
+  const fill = (subs) => {
+    if (!subs.length) { box.replaceChildren(); return; }
+    const want = params.get('submission');
+    box.replaceChildren(h('h3', {}, 'Your attempts'), ...subs.map((s) => {
+      const rows = sheetRows(s), t = sheetTotals(rows), marked = s.status === 'marked';
+      return h('details', { class: 'exam-attempt', open: s.id === want, id: `sub-${s.id}` },
+        h('summary', {}, h('strong', {}, new Date(s.created_at).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })),
+          marked ? h('span', { class: 'score-pill' }, `${t.got} / ${t.max}`) : h('span', { class: 'badge' }, `Waiting for your tutor · simulator ${s.answers?.auto ?? '?'} / ${s.answers?.autoMax ?? '?'}`)),
+        marked && s.comment ? h('blockquote', { class: 'comment' }, s.comment) : '',
+        examSheet(rows));
+    }));
+    if (want) setTimeout(() => document.getElementById(`sub-${want}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  };
+  if (myExams) fill(myExams);
+  else mySubmissions().then((all) => { myExams = all.filter((s) => s.lesson_id === lesson.id && s.exercise_id === ex.id); fill(myExams); }).catch(() => {});
+  return box;
+}
+
 function examCard(ex) {
   return h('div', {},
-    h('p', { class: 'muted' }, 'The desk starts zeroed with one condenser mic on wall box 1 (Input X = channel 1). Return the DAW on channel 5. When you finish, press End exam on the desk: you pass with 70% of the simulator blocks. Your tutor marks the blocks the simulator can’t see.'),
+    h('p', { class: 'muted' }, 'The desk starts zeroed with one condenser mic on wall box 1 (Input X = channel 1). Return the DAW on channel 5. When you finish, press End exam on the desk: you pass with 70% of the simulator blocks, and the whole sheet goes to your tutor, who marks the blocks the simulator can’t see and can adjust the rest.'),
     lastExam ? h('p', {}, h('strong', {}, `Last attempt: ${lastExam.auto} / ${lastExam.autoMax} simulator blocks`), ` · ${lastExam.total} / ${lastExam.max} with tutor marks`) : '',
-    h('button', { type: 'button', class: 'btn primary', onclick: () => openDesk(ex, 'desk.html?exam=1#exam') }, lastExam ? 'Take the exam again' : 'Start the exam'));
+    h('button', { type: 'button', class: 'btn primary', onclick: () => openDesk(ex, 'desk.html?exam=1#exam') }, lastExam ? 'Take the exam again' : 'Start the exam'),
+    attemptsBox(ex));
 }
 
 function openDesk(ex, url) {
@@ -148,6 +185,7 @@ window.addEventListener('message', (e) => {
   if (d.type === 'exam' && ex.kind === 'exam') {
     lastExam = { auto: d.auto, autoMax: d.autoMax, total: d.total, max: d.max, at: Date.now() };
     store.set(`es.exam.${lesson.id}`, lastExam);
+    sendExam(ex, d);
     if (d.autoMax && d.auto / d.autoMax >= 0.7) {
       mark(ex, 'exam-pass', `${lesson.id}/exam`);
       if (d.auto === d.autoMax) awardXp('exam-perfect', `${lesson.id}/exam`);

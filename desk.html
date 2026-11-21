@@ -2078,7 +2078,10 @@ if(TASK&&TASKS[TASK]){
 if(TASK||QS.get('exam')){ $('excard').hidden=true; $('excard').parentElement.classList.add('one'); }
 if(QS.get('exam')){ $('exStart').click(); setTimeout(()=>showView('exam'),0); }
 $('exStop').addEventListener('click',()=>{ let auto=0,autoMax=0,tot=0; EXB.forEach(([q,n,fn],k)=>{ const isT=fn(LAST)===T; if(!isT){ autoMax++; auto+=EXAM.best[k]||0; } tot+=(isT?EXAM.tutor[k]:EXAM.best[k])||0; });
-  tell({type:'exam',auto,autoMax,total:tot,max:EXB.length});
+  // every block, for the tutor's Inbox: simulator scores as earned, tutor blocks left for the tutor
+  const blocks=EXB.map(([q,n,fn],k)=>{ const isT=fn(LAST)===T, v=isT?EXAM.tutor[k]:EXAM.best[k];
+    return {q,name:n,by:isT?'tutor':'sim',score:v===undefined||v===null?null:v,why:(WHY[n]?WHY[n]():'')||''}; });
+  tell({type:'exam',auto,autoMax,total:tot,max:EXB.length,blocks,questions:QT});
   const r=autoMax?auto/autoMax:0;
   zen(auto===autoMax?'Every block, clean. Do not smile yet.':r>=0.7?`${auto} of ${autoMax}. The door opens. It is not a home.`:`${auto} of ${autoMax}. Empty your cup. Then come back.`,auto===autoMax?'pleased':r>=0.7?'calm':'stern'); });
 

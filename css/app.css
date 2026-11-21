@@ -752,3 +752,22 @@ a.btn { text-decoration: none; display: inline-block; }
 .zen-home { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; }
 .zen-home .zen-master svg { width: 64px; }
 @media (max-width: 560px) { .zen-home { grid-template-columns: 48px 1fr; } .zen-home .btn { grid-column: 1 / -1; } }
+
+/* ---------- Exam scoresheet (lesson and Inbox) ---------- */
+.exsheet { display: flex; flex-direction: column; gap: 10px; }
+.exsheet .exq { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.exsheet h3 { margin: 0; padding: 8px 12px; font-size: 0.92rem; background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.exsheet .exr { display: grid; grid-template-columns: minmax(0, 1.2fr) auto minmax(0, 1.6fr); gap: 10px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); font-size: 0.92rem; }
+.exsheet .exn { min-width: 0; }
+.exsheet .exbtns { display: inline-flex; gap: 4px; }
+.exsheet .sc { min-width: 38px; text-align: center; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: inherit; font-weight: 700; font-size: 0.85rem; }
+.exsheet button.sc { cursor: pointer; }
+.exsheet span.sc.s1, .exsheet button.sc.s1.on { background: #2e8b57; color: #fff; border-color: transparent; }
+.exsheet span.sc.s05, .exsheet button.sc.s05.on { background: #d99a20; color: #fff; border-color: transparent; }
+.exsheet span.sc.s0, .exsheet button.sc.s0.on { background: #c0392b; color: #fff; border-color: transparent; }
+@media (max-width: 560px) { .exsheet .exr { grid-template-columns: 1fr auto; } .exsheet .why { grid-column: 1 / -1; } }
+.exam-attempts { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.exam-attempt { border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.exam-attempt summary { cursor: pointer; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.mark-exam { display: flex; flex-direction: column; gap: 14px; }
+.mark-bar { position: sticky; top: 0; z-index: 5; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 10px 0; background: var(--bg); }
