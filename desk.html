@@ -238,6 +238,15 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .tp.on[data-dt="play"]{background:var(--led-green);color:#fff;border-color:transparent}
 .tp.on[data-dt="rec"]{background:var(--led-red);color:#fff;border-color:transparent}
 .clock{font-family:var(--mono);font-size:16px;background:#0f1216;color:#8fe3a0;padding:5px 12px;border-radius:6px;letter-spacing:.04em;white-space:nowrap}
+.dfile{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--line)}
+.dfile .dses{flex:1 1 220px;font-size:13px}
+.dfile .dirty{color:var(--led-red);font-weight:600}.dfile .ok{color:var(--led-green);font-weight:600}
+.dfile .tool[disabled]{opacity:.45;cursor:not-allowed}
+.ddlg{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.ddlg input,.ddlg select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+.daw-scroll.empty::after{content:'No tracks. File: New session…, then New track…';display:block;padding:18px 12px;color:var(--muted)}
+.tnm{width:100%;font:600 12px var(--font);border:1px solid transparent;border-radius:4px;background:transparent;color:var(--ink);padding:2px 4px}
+.tnm:hover,.tnm:focus{border-color:var(--line);background:var(--bg)}
 .dawstat{font-size:12.5px;color:var(--muted);flex:1 1 220px;min-width:0}
 .dawstat.rec{color:var(--led-red);font-weight:600}
 .daw-scroll{overflow-x:auto}
@@ -274,6 +283,23 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .sock{background:none;border:none;color:inherit;cursor:pointer;padding:2px;border-radius:6px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:52px;font-family:var(--mono);font-size:10px}
 .sock .h{width:22px;height:22px;border-radius:50%;background:var(--jack);border:3px solid #6b7480;box-shadow:inset 0 2px 3px rgba(0,0,0,.7)}
 .sock.on .h{border-color:var(--led-green)}
+.stage1{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(0,1fr);gap:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+@media (max-width:900px){.stage1{grid-template-columns:1fr}}
+.stage1 h4{margin:0 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stage1 .st-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.stage1 .st-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+.stage1 .st-row .tool{flex:0 0 auto}
+.stage1 .st-row input[type=range]{flex:1 1 120px;min-width:0}
+.stage1 .knob-t{flex:0 0 auto;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;font-weight:700;cursor:pointer;background:var(--panel-2);color:var(--ink)}
+.stage1 .knob-t.loose{background:var(--led-amber);color:#fff;border-color:transparent}
+.stage1 .st-note{font-size:12px;color:var(--muted)}
+.stage1 svg{width:100%;height:auto;display:block}
+.st-stand{stroke:#5d6470;stroke-width:5;stroke-linecap:round;fill:none}
+.st-knob{fill:#2b2f36}.st-knob.loose{fill:var(--led-amber)}
+.st-mount{fill:none;stroke:#8a8f98;stroke-width:3}.st-mic{fill:#c9ccd2;stroke:#5d6470;stroke-width:1.5}
+.st-floor{stroke:var(--line);stroke-width:2}
+.coil-svg ellipse{fill:none;stroke-width:3}
+.coil-svg .over{stroke:#3b4250}.coil-svg .under{stroke:#3b4250;stroke-dasharray:6 4}.coil-svg .tw{stroke:var(--led-red)}
 .stations{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
 .stn{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--c,var(--line));border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px}
 .stn.off{opacity:.6;border-left-style:dashed}
@@ -437,6 +463,7 @@ button.sc{cursor:pointer;width:100%}
   <section class="view" id="view-room" hidden>
     <div class="room">
       <div class="wallbox"><div class="wb-t">WALL BOX · MIC LINES TO CONTROL ROOM</div><div class="wb-s" id="wbs"></div></div>
+      <div class="stage1" id="stage1" aria-label="Station 1: stand, microphone and cable"></div>
       <div class="stations" id="stations"></div>
       <div class="hpamp" id="hpamp" aria-label="Headphone amp"></div>
       <div class="phones" id="phones"></div>
@@ -508,7 +535,7 @@ button.sc{cursor:pointer;width:100%}
   <section class="view" id="view-exam" hidden>
     <section class="card">
       <div class="card-h"><h2>Signal flow exam (formative)</h2><div class="row" style="flex:0 0 auto"><button class="tool" id="exStart">Start exam</button><button class="tool" id="exStop">End exam</button></div></div>
-      <p class="note" id="exBrief">Start the exam to zero the console and the studio. One condenser mic is waiting in the live room on <b>wall box 1</b> (Input X = channel 1). Bring the DAW return back on <b>channel 5</b>, and the click on any other free channel. Each block scores 1 (done right), 0.5 (partly done) or 0 (fundamental error, such as 48V switched on after the gain, or a mic unplugged with 48V on). Scores lock in once earned, so you can move on; a fundamental error sets the block to 0. Blocks the simulator cannot see are marked by the tutor: click their score to set 1, 0.5 or 0.</p>
+      <p class="note" id="exBrief">Start the exam to zero the console and the studio. One condenser mic is waiting in the live room on <b>wall box 1</b> (Input X = channel 1). Bring the DAW return back on <b>channel 5</b>, and the click on any other free channel. Each block scores 1 (done right), 0.5 (partly done) or 0 (fundamental error, such as 48V switched on after the gain, or a mic unplugged with 48V on). Scores lock in once earned, so you can move on; a fundamental error sets the block to 0. Only General attitude is left to the tutor; on the standalone desk the tutor can click its score.</p>
       <div class="extot" id="exTot"></div>
       <div class="extab" id="exTab"></div>
     </section>
@@ -586,11 +613,16 @@ function defaultChannel(){
 }
 let TAKEV=0;
 const stemTake=k=>({kind:'stem',k,sigs:[{name:SRCN[k]+' (DAW)',k}],label:SRCN[k],ver:0});
+// Station 1 in the live room: the stand, the shockmount, the mic and its cable (set up and in use, outside the exam)
+function readyMic(){ return {stand:'boom',h:{tight:true,v:160},a:{tight:true,v:20},folded:false,holder:'ok',mic:'mount',ring:true,coil:{size:null,loops:[],done:false}}; }
+function boxedMic(){ return {stand:null,h:{tight:true,v:95},a:{tight:true,v:-80},folded:true,holder:null,mic:'box',ring:false,coil:{size:null,loops:[],done:false}}; }
+const trOn=t=>S.daw.ses.open&&t.made; // a track exists and its session is open
 function defaultState(){
   return {sel:0,ch:CHS.map(defaultChannel),
     patch:[],
     room:ROOMDEF.map(([src,mic])=>({src,mic,plug:true})),
-    daw:{play:false,click:{on:false,out:8},tr:CHS.map(k=>({inp:k+1,out:k+1,arm:false,mon:false,mute:false,vol:75,take:DEMO[k]?stemTake(DEMO[k]):null}))},
+    daw:{play:false,click:{on:false,out:8},ses:{open:true,name:'Demo session',saved:true,dirty:false,closed:false,ever:true},tr:CHS.map(k=>({inp:k+1,out:k+1,arm:false,mon:false,mute:false,vol:75,made:true,kind:'mono',name:'',take:DEMO[k]?stemTake(DEMO[k]):null}))},
+    mic1:readyMic(),
     hp:{on:true,a:6,b:6,plugA:true,plugB:true},
     rev:{inLvl:0,pre:20,decay:2.4,damp:6000,mix:100,out:0,byp:false},
     comp:{thr:-24,ratio:4,att:10,rel:150,mk:6,byp:false},
@@ -650,9 +682,9 @@ function sourceFeeds(F){
 function pass(F){
   const feed=id=>{ const s=srcOf(id); return s?F[s]:EMPTY; };
   // DAW: inputs from the previous pass, outputs to the patchbay
-  const dawTr=S.daw.tr.map((t,k)=>{ const inS=feed('dawi'+t.inp).sigs, monOn=t.arm||t.mon;
+  const dawTr=S.daw.tr.map((t,k)=>{ if(!trOn(t)) return {inS:[],out:[],monOn:false}; const inS=feed('dawi'+t.inp).sigs, monOn=t.arm||t.mon;
     let out=monOn?inS:(S.daw.play&&t.take?t.take.sigs:[]); if(t.mute||t.vol<=0) out=[]; return {inS,out,monOn}; });
-  const clickSig=S.daw.click.on&&S.daw.play?[{name:'Click',k:'test'}]:[];
+  const clickSig=S.daw.ses.open&&S.daw.click.on&&S.daw.play?[{name:'Click',k:'test'}]:[];
   for(let o=1;o<=8;o++) F['dawo'+o]=mk(union(...dawTr.filter((_,k)=>S.daw.tr[k].out===o).map(x=>x.out), S.daw.click.out===o?clickSig:[]));
   F.daw2=mk(union(...dawTr.map(x=>x.out)));
   const B={rec:[],mix:[],cueA:[],cueB:[],fx:[[],[],[],[]],pfl:[],afl:[],trk:[[],[],[],[],[],[],[],[]]};
@@ -791,6 +823,7 @@ const TIPS={
   retLvl:'Stereo return level into the REC or MIX bus.', retMix:'Stereo return to the MIX bus.', retRec:'Stereo return to the REC bus.', retFba:'Stereo return to foldback A or B, at the STUDIO level.',
   dClick:'Click track (metronome). It plays on the beat while the DAW plays, out of the DAW output you pick. Bring it back on a console channel and send it to the cue only, never to the MIX bus.',
   hpOn:'Headphone amp power. Off, nothing reaches the headphones.', hpLvl:'Headphone amp level for this output. Start low before the musician puts the headphones on.', hpPlug:'Headphones plugged into the amp and placed by the stand.',
+  dNew:'New session: start an empty DAW project with a name. A new session starts with no tracks.', dTrack:'New track: add a track to the session. For one microphone, a mono audio track.', dSave:'Save the session. Close it without saving and the changes, takes included, are lost.', dClose:'Close the session. Save it first.', dName:'Click to rename the track. Name it after what it records, for example Vocal, never leave it as Audio 1.',
   dPlay:'Play the DAW. It stays locked to the band\'s four‑bar loop. Starts the audio if needed.', dStop:'Stop the DAW. Recording in progress is discarded.',
   dRec:'Record one pass of the loop onto every armed track, starting now.', dClear:'Removes the recording from every track.', dDemo:'Puts the demo takes back on tracks 1–6.',
   dArm:'REC arm: this track records from its DAW input when you press RECORD. While armed it plays its input, not the recording.',
@@ -1239,7 +1272,8 @@ function examState(){
   d.ch.forEach(c=>{ c.gain=15; c.fader=0; });
   const C=d.c; C.recMaster=0; C.master=0; C.monLvl=0; C.cueA.lvl=0; C.cueB.lvl=0; C.fx.forEach(f=>f.lvl=0);
   C.fbA.lvl=0; C.fbB.lvl=0; C.trkM.forEach(m=>m.lvl=0); C.ret.forEach(r=>r.lvl=0);
-  d.daw.tr.forEach(t=>{ t.take=null; }); d.hp={on:false,a:0,b:0,plugA:false,plugB:false};
+  d.daw.tr.forEach(t=>{ t.take=null; t.made=false; t.name=''; }); d.daw.ses={open:false,name:'',saved:false,dirty:false,closed:false,ever:false}; d.hp={on:false,a:0,b:0,plugA:false,plugB:false};
+  d.mic1=boxedMic();
   return d;
 }
 // what "neutral" means for Q8: every console control back where the exam started
@@ -1264,7 +1298,12 @@ const spk=()=>S.c.monLvl>0&&!S.c.mcut;
 const T='tutor';
 // each block: [q, name, fn(R) -> 1 | 0.5 | 0 | null(not yet) | 'tutor', live?]
 const EXB=[
- ['Q1','Mic stand choice',()=>T],['Q1','Mic stand handling',()=>T],['Q1','Shockmount handling',()=>T],['Q1','Mic handling',()=>T],
+ ['Q1','Mic stand choice',()=>{ const t=S.mic1.stand; return t==='boom'?1:t==='straight'?0.5:t==='kick'?0:null; }],
+ ['Q1','Mic stand handling',()=>{ const m=S.mic1; if(EXAM.ev.forced) return 0; if(!m.stand||m.folded) return null;
+   const tall=m.h.v>=140&&m.h.v<=STANDS[m.stand].max, boom=m.stand==='straight'||(m.a.v>=-10&&m.a.v<=50);
+   return tall&&boom&&m.h.tight&&m.a.tight?1:0.5; }],
+ ['Q1','Shockmount handling',()=>{ const m=S.mic1; if(!m.holder) return null; return m.holder==='ok'&&m.mic==='mount'&&m.ring?1:m.holder==='wrong'?0.5:null; }],
+ ['Q1','Mic handling',()=>EXAM.ev.micCable?0:S.mic1.mic==='mount'&&S.mic1.ring?1:null],
  ['Q1','XLR patched',()=>EXAM.fault.plug48?0:S.room[0].plug?1:null],
  ['Q1','HP patched',()=>S.hp.plugA||S.hp.plugB?1:null],
  ['Q1','HP amp on',()=>S.hp.on?1:null],
@@ -1275,7 +1314,9 @@ const EXB=[
  ['Q2','Channel Path',R=>S.ch[XC].rec&&has(R.chans[XC].post,VOC)?1:null],
  ['Q2','Fader',()=>{ const f=S.ch[XC].fader; return Math.abs(f-75)<=3?1:f>0?0.5:null; }],
  ['Q2','Off-bus metering',R=>has(R.F.reco.sigs,VOC)?1:null],
- ['Q3','New DAW Project',()=>T],['Q3','Mono audio track',()=>T],['Q3','Name',()=>T],
+ ['Q3','New DAW Project',()=>S.daw.ses.ever?1:null],
+ ['Q3','Mono audio track',()=>{ const t=S.daw.tr.find(t=>trOn(t)&&t.inp===XC+1); return !t?null:t.kind==='mono'?1:t.kind==='stereo'?0.5:0; }],
+ ['Q3','Name',()=>{ const t=S.daw.tr.find(t=>trOn(t)&&t.inp===XC+1); return t&&t.name&&!/^(audio|track|mono)\s*\d*$/i.test(t.name)?1:null; }],
  ['Q3','DAW metering',R=>R.D.dawTr.some((x,k)=>x.monOn&&has(x.inS,VOC))?1:null],
  ['Q3','DAW output',()=>S.daw.tr.some(t=>t.inp===XC+1&&t.out===RC+1)?1:null],
  ['Q3','Off-tape metering',R=>LN(S.ch[RC])&&has(R.chans[RC].chIn,VOC)?1:null],
@@ -1301,12 +1342,14 @@ const EXB=[
  ['Q6','CRM monitoring',()=>EXAM.ev.clickHeard?1:null],
  ['Q7','Recording',()=>S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,VOC+' (DAW)'))?1:null],
  ['Q7','Off-tape monitoring',()=>EXAM.ev.offTapeRec?1:EXAM.ev.recOnRec?0.5:null],
- ['Q8','Save and close DAW project',()=>T],
+ ['Q8','Save and close DAW project',()=>!EXAM.q7?null:EXAM.ev.closedUnsaved?0:S.daw.ses.closed?1:null,1],
  ['Q8','Mute speakers',()=>!EXAM.q7||EXAM.ev.p48offSpk===undefined?null:EXAM.ev.p48offSpk?0:1,1],
  ['Q8','Phantom power off',()=>!EXAM.q7?null:EXAM.fault.unplug48?0:!S.ch[XC].phantom?1:null,1],
  ['Q8','Neutralise',()=>{ if(!EXAM.q7) return null; const n=notNeutral().length; return n===0?1:n<=3?0.5:0; },1],
  ['Q8','HP amp off',()=>EXAM.q7&&!S.hp.on?1:null,1],
- ['Q9','Mic off stand first',()=>T],['Q9','Shockmount',()=>T],['Q9','Cables coiled',()=>T],
+ ['Q9','Mic off stand first',()=>!EXAM.q7?null:EXAM.ev.foldMic?0:S.mic1.mic==='box'&&S.mic1.folded?1:null,1],
+ ['Q9','Shockmount',()=>!EXAM.q7?null:S.mic1.mic==='box'&&!S.mic1.holder?1:null,1],
+ ['Q9','Cables coiled',()=>!EXAM.q7||S.room[0].plug?null:coilScore(S.mic1.coil),1],
  ['Q9','Headphones put away',()=>EXAM.q7&&!S.hp.plugA&&!S.hp.plugB?1:null,1],
  ['All','General attitude',()=>T],
 ];
@@ -1336,7 +1379,13 @@ const WHY={'XLR patched':()=>EXAM.fault.plug48?'cable plugged in with 48V on':''
   'Mute speakers':()=>EXAM.ev.p48offSpk?'fundamental error: speakers were still up when 48V went off':'speakers down or cut before switching 48V off',
   'Neutralise':()=>EXAM.q7?(notNeutral().join(' · ')||'console neutral'):'scored after the recording (Q7)',
   'Mix bus allocation':()=>'return channel 5 on MIX, not REC', 'Sourced from monitor path':()=>'cue from the return channel, not the live mic channel',
-  'Send to cue mix':()=>'click in the cue, not on the MIX bus', 'Off-tape monitoring':()=>'listen to the MIX bus while recording'};
+  'Send to cue mix':()=>'click in the cue, not on the MIX bus', 'Off-tape monitoring':()=>'listen to the MIX bus while recording',
+  'Mic stand choice':()=>S.mic1.stand?STANDS[S.mic1.stand].n:'Live room: choose a stand', 'Mic stand handling':()=>EXAM.ev.forced?'a joint was forced with its knob tight':'undo the knob, move, tighten: 140 cm or more, boom between −10° and 50°',
+  'Shockmount handling':()=>S.mic1.holder==='wrong'?'the holder was spun onto the thread':'joint into the holder, mic in, ring locked', 'Mic handling':()=>EXAM.ev.micCable?'mic lifted by its cable':'by the body, into the shockmount',
+  'New DAW Project':()=>'DAW tab: New session…', 'Mono audio track':()=>'one mic: a mono audio track, input 1', 'Name':()=>'name the track after its source, not Audio 1',
+  'Save and close DAW project':()=>EXAM.ev.closedUnsaved?'closed without saving':'Save, then Close session (after the recording)',
+  'Mic off stand first':()=>EXAM.ev.foldMic?'tried to fold the stand with the mic on it':'mic into its box, then fold the stand', 'Shockmount':()=>'take the shockmount off once the mic is away',
+  'Cables coiled':()=>S.mic1.coil.done?'':'unplug, then coil: right size, over and under'};
 function drawExam(){
   const bar=$('exambar'); bar.hidden=!EXAM.on;
   let auto=0, tut=0, max=0, html='', cur='';
@@ -1354,15 +1403,15 @@ function drawExam(){
 }
 // ---- the question in hand, always on screen while the exam runs ----
 const QORD=['Q1','Q2','Q3','Q4','Q5','Q6','Q7','Q8','Q9'];
-const QP={Q1:'In the live room, put the condenser mic on a boom stand with its shockmount, and patch it to Input X (wall box 1, which feeds channel 1). Give the musician headphones: plug them in and switch the headphone amp on.',
+const QP={Q1:'Live room tab: choose a stand and set it up (undo each knob before you move a joint), fit the shockmount, put the condenser mic in it, and patch it to Input X (wall box 1, which feeds channel 1). Give the musician headphones: plug them in and switch the headphone amp on.',
   Q2:'Bring the mic into channel 1: choose the mic input, phantom power, and set the preamp so the channel meter reads −6 to +6 dB. Send it down the channel path to the REC bus with the fader at 0 dB, and meter it off-bus.',
-  Q3:'In the DAW: a new project with one mono audio track, named. Set its input so you can meter the mic in the DAW. Send the track output to channel 5 and meter it there, off-tape.',
+  Q3:'DAW tab: New session…, then New track… (one mono audio track) and name it. Set its input so you can meter the mic in the DAW. Send the track output to channel 5 and meter it there, off-tape.',
   Q4:'Put the off-tape signal (channel 5) on the MIX bus and meter it. Choose MIX as the control-room source, check its meter, and listen on the speakers.',
   Q5:'Build a stereo cue mix for the singer from the off-tape signal: pre-fader, send and master up. Meter the cue, check it in the control room with AFL, then raise the headphone levels so it reaches the cans.',
   Q6:'Create a click in the DAW and bring it back on a free channel. Send it to the cue mix only, never to the MIX bus. Meter it and listen to it in the control room.',
   Q7:'Record at least one pass, monitoring off-tape on the MIX bus while you record.',
-  Q8:'Save and close the project. Mute the speakers, switch phantom power off, put every console control back where it started, and switch the headphone amp off.',
-  Q9:'Pack up the live room: mic off the stand first, shockmount away, cables coiled, headphones put away.'};
+  Q8:'DAW tab: Save, then Close session. Mute the speakers, switch phantom power off, put every console control back where it started, and switch the headphone amp off.',
+  Q9:'Live room tab: mic off the stand and into its box first, then the shockmount, fold the stand, coil the cable (unplugged) and put the headphones away.'};
 const ZQ={Q1:'Before sound, the stand. Set it well. The microphone will trust you.',
   Q2:'Power, then gain. Never the other way.',
   Q3:'A track without a name is a thought you will lose. Name it.',
@@ -1512,7 +1561,11 @@ window.addEventListener('resize',drawCables);
 const dawEl=$('daw');
 let dawMsg='';
 const outOpt=k=>`<option value="${k}">OUT ${k} → CH ${k} line</option>`;
-dawEl.innerHTML=`<div class="transport">
+dawEl.innerHTML=`<div class="dfile"><span class="dses" id="dses"></span>
+    <button class="tool" data-df="new" data-tip="dNew" data-label="New session">New session…</button><button class="tool" data-df="track" data-tip="dTrack" data-label="New track">New track…</button>
+    <button class="tool" data-df="save" data-tip="dSave" data-label="Save session">Save</button><button class="tool" data-df="close" data-tip="dClose" data-label="Close session">Close session</button></div>
+  <div class="ddlg" id="ddlg" hidden></div>
+  <div class="transport">
     <button class="tp" data-dt="play" data-tip="dPlay" data-label="Play">▶ PLAY</button><button class="tp" data-dt="stop" data-tip="dStop" data-label="Stop">■ STOP</button><button class="tp" data-dt="rec" data-tip="dRec" data-label="Record">● RECORD</button>
     <span class="clock" id="dclock">BAR 1 · BEAT 1</span><span class="dawstat" id="dawstat"></span>
     <button class="b amber" data-dt="click" data-tip="dClick" data-label="Click track" style="flex:0 0 auto;padding:5px 10px">CLICK</button><label class="dclk" data-tip="dClick" data-label="Click output">to OUT <select id="dclickout" aria-label="Click output">${[1,2,3,4,5,6,7,8].map(o=>`<option value="${o}">${o}</option>`).join('')}</select></label>
@@ -1520,7 +1573,7 @@ dawEl.innerHTML=`<div class="transport">
   <div class="daw-scroll">
     <div class="trk head"><span>Track · DAW input</span><span>Rec · In · Mute · Clear</span><span>Volume</span><span>Input (from desk)</span><span>Output (to desk)</span><div class="ruler">${[0,1,2,3].map(b=>`<span style="left:${b*25}%">${b+1}</span>`).join('')}</div></div>
     ${CHS.map(k=>`<div class="trk" data-dtrow="${k}">
-      <div class="tname"><b id="dn-${k}"></b><span class="tin" id="dsrc-${k}"></span><div class="hm" data-tip="dArm" data-label="DAW input level"><i id="dm-${k}"></i></div></div>
+      <div class="tname"><input class="tnm" id="dnm-${k}" data-dtr="${k}" data-k="name" maxlength="24" aria-label="Track ${k+1} name" data-tip="dName" data-label="Track name"><b id="dn-${k}"></b><span class="tin" id="dsrc-${k}"></span><div class="hm" data-tip="dArm" data-label="DAW input level"><i id="dm-${k}"></i></div></div>
       <div class="row">${btn(`data-dtr="${k}" data-k="arm" data-tip="dArm"`,'REC','red')}${btn(`data-dtr="${k}" data-k="mon" data-tip="dMon"`,'IN','green')}${btn(`data-dtr="${k}" data-k="mute" data-tip="dMute"`,'M','yellow')}${btn(`data-dtr="${k}" data-k="clr" data-tip="dClr"`,'CLR','red')}</div>
       <div class="tvol" data-tip="dVol" data-label="Track volume"><input type="range" min="0" max="100" step="1" id="dvol-${k}" data-dtr="${k}" data-k="vol" aria-label="Track ${k+1} volume"><output id="ddb-${k}"></output></div>
       <div data-tip="dIn" data-label="Track input"><select id="din-${k}" data-dtr="${k}" data-k="inp" aria-label="Track ${k+1} input">${[...Array(8)].map((_,j)=>`<option value="${j+1}">IN ${j+1} ← CH ${j+1} direct</option>`).join('')}</select></div>
@@ -1553,7 +1606,9 @@ function drawDAW(R){
   setOn('[data-dt="play"]',S.daw.play); setOn('[data-dt="rec"]',!!A.rec);
   S.daw.tr.forEach((t,k)=>{
     ['arm','mon','mute'].forEach(x=>setOn(`[data-dtr="${k}"][data-k="${x}"]`,t[x]));
-    $('dn-'+k).innerHTML=`<span>${k+1}</span>`+(t.take?t.take.label:'empty');
+    document.querySelector(`[data-dtrow="${k}"]`).hidden=!trOn(t);
+    const nm=$('dnm-'+k); if(document.activeElement!==nm) nm.value=trName(t,k);
+    $('dn-'+k).innerHTML=`<span>${{mono:'mono',stereo:'stereo',midi:'MIDI',aux:'aux'}[t.kind]||''}</span>`+(t.take?t.take.label:'empty');
     const inS=R.D.dawTr[k].inS, s=srcOf('dawi'+t.inp);
     $('dsrc-'+k).textContent='IN '+t.inp+' ← '+(s?PT[s].label:'nothing')+(inS.length?': '+inS.map(x=>x.name).join(', '):'');
     $('dvol-'+k).value=t.vol; $('ddb-'+k).textContent=dB(t.vol); $('dout-'+k).value=t.out; $('din-'+k).value=t.inp;
@@ -1562,6 +1617,10 @@ function drawDAW(R){
     lane.classList.toggle('arm',t.arm); lane.classList.toggle('rec',!!(A.rec&&A.rec.tr.includes(k))); lane.classList.toggle('dim',t.arm||t.mon||t.mute);
     if(!A.on) $('dm-'+k).style.width=inS.length?'55%':'0';
   });
+  const ses=S.daw.ses, nT=S.daw.tr.filter(trOn).length;
+  $('dses').innerHTML=ses.open?`<b>${ses.name}</b> ${ses.dirty||!ses.saved?'<span class="dirty">● not saved</span>':'<span class="ok">saved</span>'} · ${nT} track${nT===1?'':'s'}`:`<b>No session open</b>${ses.closed?' · closed':''}`;
+  ['track','save','close'].forEach(x=>{ const b=dawEl.querySelector(`[data-df="${x}"]`); b.disabled=!ses.open; });
+  dawEl.querySelector('.daw-scroll').classList.toggle('empty',!ses.open||!nT);
   const st=$('dawstat'); st.classList.toggle('rec',!!A.rec);
   if(!A.rec) st.textContent=dawMsg||(S.daw.play?'Playing, locked to the band\'s loop.':'Stopped. Outputs carry only armed or IN tracks.');
 }
@@ -1569,7 +1628,7 @@ async function dawPlay(){ if(!A.on) await setAudio(true); S.daw.play=true; dawMs
 function dawStop(){ if(A.rec){ A.rec=null; dawMsg='Recording stopped. The take was discarded.'; } else dawMsg=''; S.daw.play=false; }
 async function dawRec(){
   if(A.rec) return;
-  const armed=S.daw.tr.map((t,k)=>t.arm?k:-1).filter(k=>k>=0);
+  const armed=S.daw.tr.map((t,k)=>t.arm&&trOn(t)&&/audio|mono|stereo/.test(t.kind)?k:-1).filter(k=>k>=0);
   if(!armed.length){ dawMsg='Arm a track first: press REC on the track you want to record.'; return; }
   if(!A.on) await setAudio(true);
   S.daw.play=true; dawMsg='';
@@ -1583,10 +1642,43 @@ function finishRec(){
     const sigs=Rc.sigs[i].map(s=>({name:/\(DAW\)$/.test(s.name)?s.name:s.name+' (DAW)',k:s.k,fx:s.fx}));
     const t=S.daw.tr[k]; t.take={kind:'buf',sigs,label:Rc.sigs[i].length?Rc.sigs[i].map(s=>s.name.replace(/ \(DAW\)$/,'')).join(', '):'silence',ver:++TAKEV,peaks:peaksOf(Rc.bufs[i])}; t.arm=false;
   });
+  S.daw.ses.dirty=true;
   dawMsg='Take recorded on track '+Rc.tr.map(k=>k+1).join(', ')+'. The track was disarmed so you hear the recording.';
   render();
 }
+// ---- the session: new, tracks, names, save and close (scored in the exam, Q3 and Q8) ----
+const trName=(t,k)=>t.name||(t.kind==='midi'?'MIDI ':t.kind==='aux'?'Aux ':'Audio ')+(S.daw.tr.slice(0,k+1).filter(x=>x.made&&x.kind===t.kind).length||1);
+const dirty=()=>{ if(S.daw.ses.open){ S.daw.ses.dirty=true; } };
+function dawDialog(kind){
+  const box=$('ddlg'); if(!kind){ box.hidden=true; box.innerHTML=''; return; }
+  box.hidden=false;
+  box.innerHTML=kind==='new'
+    ?`<b>New session</b><label>Name <input id="dlgname" maxlength="40" placeholder="e.g. Vocal session 21 Nov"></label><span class="row"><button class="tool" data-dd="create">Create</button><button class="tool" data-dd="cancel">Cancel</button></span>`
+    :`<b>New track</b><label>Type <select id="dlgkind"><option value="mono">Mono audio track</option><option value="stereo">Stereo audio track</option><option value="aux">Aux input</option><option value="midi">MIDI track</option></select></label><span class="row"><button class="tool" data-dd="add">Create</button><button class="tool" data-dd="cancel">Cancel</button></span>`;
+  const f=box.querySelector('input,select'); if(f) f.focus();
+}
+$('ddlg').addEventListener('click',e=>{ const b=e.target.closest('[data-dd]'); if(!b) return; const a=b.dataset.dd;
+  if(a==='create'){ const name=$('dlgname').value.trim(); if(!name){ dawMsg='Give the session a name first.'; render(); return; }
+    if(A.rec) A.rec=null; S.daw.play=false;
+    S.daw.ses={open:true,name,saved:false,dirty:true,closed:false,ever:true}; S.daw.tr.forEach(t=>{ t.made=false; t.take=null; t.name=''; t.arm=false; t.mon=false; }); A.takeBuf=[];
+    dawMsg='New session created. Add a track: New track…'; }
+  if(a==='add'){ const k=S.daw.tr.findIndex(t=>!t.made); if(k<0){ dawMsg='This session has all 8 tracks.'; }
+    else { const t=S.daw.tr[k]; Object.assign(t,{made:true,kind:$('dlgkind').value,name:'',arm:false,mon:false,mute:false,vol:75,take:null,inp:k+1,out:k+1}); dirty(); dawMsg=`Track ${k+1} created. Name it: click its name.`; } }
+  dawDialog(null); render(); });
+function dawFile(x){
+  const ses=S.daw.ses;
+  if(x==='new') return dawDialog('new');
+  if(x==='track') return dawDialog('track');
+  if(x==='save'){ ses.saved=true; ses.dirty=false; dawMsg='Session saved.'; }
+  if(x==='close'){ if(A.rec) A.rec=null; S.daw.play=false;
+    const lost=ses.dirty||!ses.saved; if(lost){ EXAM.ev.closedUnsaved=EXAM.ev.closedUnsaved||EXAM.on; zen('You closed it without saving. The take is gone. So is the singer\'s patience.','stern'); }
+    Object.assign(ses,{open:false,closed:true}); dawMsg=lost?'Closed without saving: the changes are lost.':'Session saved and closed.'; }
+  render();
+}
 dawEl.addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b) return; const d=b.dataset;
+  if(d.df){ dawFile(d.df); return; }
+  if(b.closest('#ddlg')) return;
+  if(d.dtr!==undefined||['click','clear','demo'].includes(d.dt)) dirty();
   if(d.dt==='click'){ S.daw.click.on=!S.daw.click.on; render(); return; }
   if(d.dt==='play') await dawPlay(); else if(d.dt==='stop') dawStop(); else if(d.dt==='rec') await dawRec();
   else if(d.dt==='clear'){ S.daw.tr.forEach(t=>t.take=null); A.takeBuf=[]; dawMsg='All takes cleared.'; }
@@ -1594,7 +1686,10 @@ dawEl.addEventListener('click',async e=>{ const b=e.target.closest('button'); if
   else if(d.dtr!==undefined&&d.k==='clr'){ if(A.rec&&A.rec.tr.includes(+d.dtr)) return; S.daw.tr[d.dtr].take=null; A.takeBuf[d.dtr]=null; dawMsg='Track '+(+d.dtr+1)+' cleared.'; }
   else if(d.dtr!==undefined){ if(d.k==='arm'&&A.rec) return; const t=S.daw.tr[d.dtr]; t[d.k]=!t[d.k]; }
   render(); });
-dawEl.addEventListener('input',e=>{ const d=e.target.dataset; if(e.target.id==='dclickout'){ S.daw.click.out=+e.target.value; render(); return; } if(d.dtr===undefined) return; if(d.k==='inp'&&A.rec) return; S.daw.tr[d.dtr][d.k]=+e.target.value; render(); });
+dawEl.addEventListener('input',e=>{ const d=e.target.dataset; if(e.target.closest('#ddlg')) return; if(e.target.id==='dclickout'){ S.daw.click.out=+e.target.value; dirty(); render(); return; } if(d.dtr===undefined) return;
+  if(d.k==='name'){ S.daw.tr[d.dtr].name=e.target.value.trim(); dirty(); render(); return; }
+  if(d.k==='inp'&&A.rec) return; S.daw.tr[d.dtr][d.k]=+e.target.value; dirty(); render(); });
+dawEl.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.closest('#ddlg')){ const b=$('ddlg').querySelector('[data-dd="create"],[data-dd="add"]'); if(b) b.click(); } });
 
 // ================= meter bridge =================
 const BR=[['CHANNELS',CHS.map(i=>['ch'+i,String(i+1)])],['TRACK BUSES',[1,2,3,4,5,6,7,8].map(k=>['tb'+k,String(k)])],
@@ -1639,7 +1734,7 @@ function drawRoom(R){
     $('rb-'+k).innerHTML=b;
     wb+=`<button class="sock ${m?'on':''}" data-plug="${k}" data-tip="plug" data-label="Wall box ${n}" aria-label="Wall box socket ${n}: ${m?m.name+', plugged':'empty'}"><span>${n}</span><span class="h"></span><span>${m?m.name:(r.src&&!r.plug?'unplugged':'—')}</span></button>`;
   });
-  $('wbs').innerHTML=wb;
+  $('wbs').innerHTML=wb; drawStage();
   $('phones').innerHTML=[['Headphones A','pha'],['Headphones B','phb']].map(([t,id])=>{ const l=R.D[id], s=srcOf(id);
     return `<div class="out ${l.length?'has':''}"><div class="out-t">${t}<small>fed by ${s?PT[s].label:'nothing'}</small></div><div class="chips">${chips(l)}</div></div>`; }).join('');
 }
@@ -1650,6 +1745,83 @@ $('view-room').addEventListener('click',e=>{ const b=e.target.closest('[data-plu
 $('stations').addEventListener('input',e=>{ const d=e.target.dataset; if(d.room===undefined) return; const r=S.room[d.room];
   if(d.k==='src'){ r.src=e.target.value||null; if(r.src){ r.mic=INSTR[r.src].mics[0]; r.plug=true; } } else r.mic=e.target.value;
   render(); });
+
+// ---- station 1: stand, shockmount, mic and cable (scored in the exam, Q1 and Q9) ----
+const STANDS={boom:{n:'Boom stand',max:190},straight:{n:'Straight stand',max:190},kick:{n:'Short boom stand (kick)',max:75}};
+const COILS={fist:'Fist size','7in':'A bit bigger than a 7-inch record',lp:'LP size or bigger'};
+Object.assign(ZL,{forced:'You forced the joint. The knob wears loose. Undo it first.',micCable:'Never by the cable. The mic is not a yo-yo.',
+  foldMic:'The mic is still on the stand. Mic first. Always.',wrongHolder:'You spun the holder on the thread. Turn the joint into the holder.',
+  holderMic:'The mic first. Then the holder.',twist:'Two loops the same way. A twist is born.',noHolder:'Where will it sit? The holder first.'});
+function coilScore(c){ if(!c.done) return null; let tw=0; for(let i=1;i<c.loops.length;i++) if(c.loops[i]===c.loops[i-1]) tw++;
+  const size=c.size==='7in'; return !tw&&size?1:(tw<=1&&size)||!tw?0.5:0; }
+function standSVG(m){
+  let g='<line class="st-floor" x1="10" y1="250" x2="210" y2="250"/>';
+  if(!m.stand){ g+='<text x="110" y="140" text-anchor="middle" font-size="12" fill="currentColor" opacity=".6">no stand yet</text>'; }
+  else {
+    const folded=m.folded, H=Math.min(m.h.v,STANDS[m.stand].max), topY=250-H*1.15, x=110;
+    g+=folded?`<path class="st-stand" d="M${x} 250 L${x-6} 200 M${x} 250 L${x+6} 200 M${x} 250 V${topY}"/>`:`<path class="st-stand" d="M${x-40} 250 L${x} 215 L${x+40} 250 M${x} 250 L${x} 215 V${topY}"/>`;
+    g+=`<circle class="st-knob ${m.h.tight?'':'loose'}" cx="${x}" cy="${Math.max(topY+40,215-30)}" r="6"/>`;
+    let hx=x, hy=topY;
+    if(m.stand!=='straight'){ const a=m.a.v*Math.PI/180, L=folded?50:85; hx=x+Math.cos(a)*L; hy=topY-Math.sin(a)*L;
+      g+=`<line class="st-stand" x1="${x-Math.cos(a)*20}" y1="${topY+Math.sin(a)*20}" x2="${hx}" y2="${hy}" style="stroke-width:4"/><circle class="st-knob ${m.a.tight?'':'loose'}" cx="${x}" cy="${topY}" r="7"/>`; }
+    if(m.holder) g+=`<circle class="st-mount" cx="${hx}" cy="${hy-14}" r="13"/>`;
+    if(m.mic==='mount') g+=`<rect class="st-mic" x="${hx-7}" y="${hy-36}" width="14" height="40" rx="7"/>`+(m.ring?`<line x1="${hx-12}" y1="${hy-2}" x2="${hx+12}" y2="${hy-2}" stroke="var(--led-green)" stroke-width="3"/>`:'');
+  }
+  if(m.mic==='box'||m.mic==='hand') g+=`<rect x="160" y="226" width="44" height="22" rx="3" fill="#2b2f36"/><text x="182" y="241" text-anchor="middle" font-size="9" fill="#fff">MIC BOX</text>`+(m.mic==='hand'?'<rect class="st-mic" x="150" y="150" width="14" height="40" rx="7"/><text x="157" y="205" text-anchor="middle" font-size="9" fill="currentColor">in hand</text>':'');
+  return `<svg viewBox="0 0 220 260" aria-hidden="true">${g}</svg>`;
+}
+function coilSVG(c){
+  let g=''; c.loops.forEach((l,i)=>{ const tw=i>0&&l===c.loops[i-1], r=c.size==='fist'?22:c.size==='lp'?62:42;
+    g+=`<ellipse class="${l} ${tw?'tw':''}" cx="${110+i*2}" cy="${60+i}" rx="${r}" ry="${r*0.8}"/>`; });
+  return `<svg class="coil-svg" viewBox="0 0 220 130" aria-hidden="true">${g||'<text x="110" y="68" text-anchor="middle" font-size="12" fill="currentColor" opacity=".6">cable on the floor</text>'}</svg>`;
+}
+function drawStage(){
+  const m=S.mic1, c=m.coil, b=(act,label,extra='')=>`<button class="tool" type="button" data-st="${act}" ${extra}>${label}</button>`;
+  let L='';
+  if(!m.stand) L+=`<div class="st-row"><span>1 · Choose a stand:</span>${Object.entries(STANDS).map(([k,v])=>b('stand:'+k,v.n)).join('')}</div>`;
+  else {
+    L+=`<div class="st-row"><b>${STANDS[m.stand].n}</b>${m.folded?' · folded':''}</div>`;
+    L+=`<div class="st-row"><span style="width:62px">Height</span><button class="knob-t ${m.h.tight?'':'loose'}" type="button" data-st="knob:h">${m.h.tight?'knob tight':'knob loose'}</button><input type="range" min="90" max="${STANDS[m.stand].max}" value="${Math.min(m.h.v,STANDS[m.stand].max)}" data-st="move:h" aria-label="Stand height"><span>${Math.min(m.h.v,STANDS[m.stand].max)} cm</span></div>`;
+    if(m.stand!=='straight') L+=`<div class="st-row"><span style="width:62px">Boom</span><button class="knob-t ${m.a.tight?'':'loose'}" type="button" data-st="knob:a">${m.a.tight?'knob tight':'knob loose'}</button><input type="range" min="-80" max="60" value="${m.a.v}" data-st="move:a" aria-label="Boom angle"><span>${m.a.v}°</span></div>`;
+    L+=`<div class="st-row">${b('fold','Fold the stand away')}</div>`;
+  }
+  let M='';
+  M+=`<div class="st-row"><span>Shockmount:</span>${m.holder?`<b>${m.holder==='ok'?'on the stand':'on the stand (holder spun)'}</b>${b('holderOff','Take it off')}`:b('holder:ok','Turn the joint into the holder')+b('holder:wrong','Turn the holder onto the joint')}</div>`;
+  M+=`<div class="st-row"><span>Mic:</span>${m.mic==='box'?b('take:body','Take it out by the body')+b('take:cable','Take it out by the cable')
+    :m.mic==='hand'?b('mount','Put it in the shockmount')+b('box','Back in its box')
+    :`<b>in the shockmount</b><button class="knob-t ${m.ring?'':'loose'}" type="button" data-st="ring">${m.ring?'ring locked':'ring unlocked'}</button>${b('unmount','Take it off, into its box')}`}</div>`;
+  const plugged=S.room[0].plug;
+  let C=`<div class="st-row"><b>Cable · wall box 1</b></div>`;
+  if(plugged) C+='<p class="st-note">In use: plugged into wall box 1.</p>';
+  else if(m.mic!=='box') C+='<p class="st-note">Unplugged from the wall box, still on the mic. Put the mic away first, then coil the cable.</p>';
+  else if(!c.size) C+=`<div class="st-row"><span>Coil size:</span>${Object.entries(COILS).map(([k,v])=>b('size:'+k,v)).join('')}</div>`;
+  else if(!c.done) C+=`<div class="st-row"><span>Loop ${c.loops.length+1} of 8:</span>${b('loop:over','Over (O)')}${b('loop:under','Under (U)')}</div><p class="st-note">Over and under, alternating, so the twists cancel out.</p>`;
+  else { const sc=coilScore(c); C+=`<p class="st-note">Coiled, ${COILS[c.size].toLowerCase()} · ${sc===1?'no twists':sc===0.5?'nearly':'twisted'}.</p>`; }
+  if(!plugged&&m.mic==='box'&&(c.size||c.loops.length)) C+=`<div class="st-row">${b('uncoil','Uncoil and start again')}</div>`;
+  $('stage1').innerHTML=`<div class="st-col">${standSVG(m)}</div><div class="st-col"><h4>Stand and microphone · station 1</h4>${L}${M}</div><div class="st-col"><h4>Cable</h4>${coilSVG(c)}${C}</div>`;
+}
+function stageAct(act,val){
+  const m=S.mic1, [k,v]=act.split(':'), ev=EXAM.ev;
+  if(k==='stand'){ m.stand=v; m.folded=true; m.h={tight:true,v:95}; m.a={tight:true,v:-80}; }
+  else if(k==='knob') m[v].tight=!m[v].tight;
+  else if(k==='move'){ const j=m[v]; if(j.tight){ ev.forced=true; fault('','forced'); } else { j.v=+val; if(m.h.v>100) m.folded=false; } }
+  else if(k==='fold'){ if(m.mic==='mount'){ if(EXAM.q7) ev.foldMic=true; fault('','foldMic'); } else { m.folded=true; m.h.v=95; m.a.v=-80; } }
+  else if(k==='holder'){ m.holder=v; if(v==='wrong'){ ev.wrongHolder=true; fault('','wrongHolder'); } }
+  else if(k==='holderOff'){ if(m.mic==='mount'){ fault('','holderMic'); } else m.holder=null; }
+  else if(k==='take'){ m.mic='hand'; if(v==='cable'){ ev.micCable=true; fault('','micCable'); } }
+  else if(k==='mount'){ if(!m.holder) fault('','noHolder'); else { m.mic='mount'; m.ring=false; } }
+  else if(k==='box') m.mic='box';
+  else if(k==='ring') m.ring=!m.ring;
+  else if(k==='unmount'){ m.mic='box'; m.ring=false; }
+  else if(k==='size') m.coil.size=v;
+  else if(k==='loop'){ const c=m.coil; if(c.loops.length&&c.loops[c.loops.length-1]===v) fault('','twist'); c.loops.push(v); if(c.loops.length>=8) c.done=true; }
+  else if(k==='uncoil') m.coil={size:null,loops:[],done:false};
+  render();
+}
+$('stage1').addEventListener('click',e=>{ const t=e.target.closest('button[data-st]'); if(t) stageAct(t.dataset.st); });
+$('stage1').addEventListener('change',e=>{ const t=e.target.closest('input[data-st]'); if(t) stageAct(t.dataset.st,t.value); });
+document.addEventListener('keydown',e=>{ if($('view-room').hidden||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return; const c=S.mic1.coil;
+  if(!S.room[0].plug&&S.mic1.mic==='box'&&c.size&&!c.done&&/^[ou]$/i.test(e.key)) stageAct('loop:'+(e.key.toLowerCase()==='o'?'over':'under')); });
 
 // ================= outboard units =================
 const rk=(path,label,min,max,o={})=>RK(Object.assign({path,label,min,max,aria:label,lg:true},o));
@@ -1807,7 +1979,7 @@ function initAudio(){
   A.monSel=G(1); A.dim=G(1); A.mono=G(1); A.mono.channelCount=1; A.mono.channelCountMode='explicit'; A.monCut=G(1);
   A.monSel.connect(A.dim); A.mono.connect(A.monCut); A.monAn=stereoAn(A.monCut);
   A.step=0; A.next=ctx.currentTime+0.1; A.loopT0=A.next;
-  A.timer=setInterval(()=>{ if(!A.on) return; while(A.next<ctx.currentTime+0.15){ const st=A.step%64; if(st===0) A.loopT0=A.next; Object.values(A.parts).forEach(p=>p.play(st,A.next)); if(S.daw.click.on&&S.daw.play&&st%4===0) A.clickHit(A.next,st%16===0); A.next+=SIX; A.step++; } },25);
+  A.timer=setInterval(()=>{ if(!A.on) return; while(A.next<ctx.currentTime+0.15){ const st=A.step%64; if(st===0) A.loopT0=A.next; Object.values(A.parts).forEach(p=>p.play(st,A.next)); if(S.daw.ses.open&&S.daw.click.on&&S.daw.play&&st%4===0) A.clickHit(A.next,st%16===0); A.next+=SIX; A.step++; } },25);
   requestAnimationFrame(meterLoop);
 }
 function E(a,b){ a.connect(b); A.edges.push([a,b]); }
@@ -1865,8 +2037,8 @@ function rewire(R){
     if(s.crmon){ if(crNode) E(crNode,x.crm); else if(C.mon==='trk') for(let k=1;k<=8;k++) E(OUT['tb'+k],x.crm); }
     set(x.lvl.gain,s.cut?0:lvlGain(s.lvl)); });
   // DAW
-  S.daw.tr.forEach((tr,k)=>{ const x=A.daw[k], monOn=tr.arm||tr.mon;
-    set(x.mon.gain,monOn?1:0); set(x.play.gain,!monOn&&S.daw.play?1:0); set(x.vol.gain,tr.mute?0:fdrGain(tr.vol,false));
+  S.daw.tr.forEach((tr,k)=>{ const x=A.daw[k], live=trOn(tr), monOn=live&&(tr.arm||tr.mon);
+    set(x.mon.gain,monOn?1:0); set(x.play.gain,live&&!monOn&&S.daw.play?1:0); set(x.vol.gain,tr.mute?0:fdrGain(tr.vol,false));
     E(IN['dawi'+tr.inp],x.inG); E(x.vol,OUT['dawo'+tr.out]); if(tr.take&&tr.take.kind==='stem') E(A.parts[tr.take.k].out,x.play); });
   dawSync();
   // outboard units
@@ -2009,9 +2181,9 @@ Object.assign(TASKS,{
     ok:R=>S.ch[4].cueOn&&!S.ch[4].cuePost&&!S.ch[0].cueOn&&has(R.D.pha,'Vocal')&&has(R.D.pha,'Click')&&S.daw.click.on&&S.daw.play&&!!TK.tr.tbHeard&&!!TK.tr.fbAfl},
   zen3:{t:'Gate 3 · One take',strict:true,steps:[],
     z:'Everything is zero. One take. Then leave the room as you found it.',
-    p:'The desk and the studio are zeroed; the condenser is on its stand by wall box 1. Plug it in, gain stage it, send it to DAW track 1 and return it on channel 5 on the MIX bus. Give the singer the vocal and the click (channel 8) in headphones A. Record one pass while you monitor off-tape and the singer hears vocal and click. Then shut down: speakers down, 48V off, unplug the mic, headphone amp off.',
+    p:'The desk and the studio are zeroed; the condenser is on its stand by wall box 1. Set up the stand and the mic, plug in, gain stage, then in the DAW a new session with a named mono track on input 1, returned on channel 5 on the MIX bus. Give the singer the vocal and the click (channel 8) in headphones A. Record one pass while you monitor off-tape and the singer hears vocal and click. Then shut down: save and close the session, speakers down, 48V off, unplug the mic, headphone amp off.',
     watch:R=>has(R.F.mixo.sigs,'Click')?'One take. You spent it on a metronome. The gate closes.':'',
-    ok:R=>S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,'Vocal (DAW)'))&&!!TK.tr.offTape&&!!TK.tr.cueRec&&!S.room[0].plug&&!S.ch[0].phantom&&!S.hp.on},
+    ok:R=>S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,'Vocal (DAW)'))&&!!TK.tr.offTape&&!!TK.tr.cueRec&&S.daw.ses.closed&&S.daw.ses.saved&&!S.daw.ses.dirty&&!S.room[0].plug&&!S.ch[0].phantom&&!S.hp.on},
 });
 STEP.zen1Break=()=>{ S.ch[0].rec=false; S.c.recMaster=0; S.daw.tr[0].out=6; S.ch[4].flip=true; S.c.mon='rec'; };
 STEP['snare-off']=()=>STEP.snare(false); STEP['snare-on']=()=>STEP.snare(true);
@@ -2066,7 +2238,7 @@ function drawTask(R){
     zen(TASK==='zen3'?'There is nothing left for me to teach you. Go. Record someone else.':T.strict?'Good. Do not smile yet.':'Good. Close the desk. Walk on.','pleased'); }
 }
 if(TASK&&TASKS[TASK]){
-  const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); TK.done=false;
+  const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); if(S.room[0].plug){ S.mic1=readyMic(); S.daw.ses={open:true,name:'Session',saved:true,dirty:false,closed:false,ever:true}; S.daw.tr.forEach(t=>t.made=true); } TK.done=false;
   const bar=document.createElement('section'); bar.className='taskbar'; bar.setAttribute('aria-label','Task');
   bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p>${T.strict?'':'<ul class="taskchk" id="taskchk" aria-label="Steps"></ul>'}<p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden><span>✓ Task done: it is ticked off in your lesson.</span>${EMBED?'<button class="b" id="taskclose" type="button">Close the desk and continue →</button>':''}</p>${T.h?`<details><summary>Hint</summary>${T.h}</details>`:''}`;
   document.querySelector('.tabs').before(bar);

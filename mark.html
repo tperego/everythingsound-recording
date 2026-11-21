@@ -9,8 +9,8 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <title>Exam Inbox · Recording · Everything Sound Academy</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e8743b'/%3E%3Crect x='9' y='7' width='3' height='18' rx='1.5' fill='white'/%3E%3Crect x='20' y='7' width='3' height='18' rx='1.5' fill='white'/%3E%3Crect x='7' y='17' width='7' height='4' rx='1' fill='white'/%3E%3Crect x='18' y='11' width='7' height='4' rx='1' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="css/app.css?v=202611210112">
-  <link rel="stylesheet" href="css/recording.css?v=202611210112">
+  <link rel="stylesheet" href="css/app.css?v=202611210115">
+  <link rel="stylesheet" href="css/recording.css?v=202611210115">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 </head>
 <body>
@@ -25,12 +25,12 @@
   <main class="page">
     <section class="card">
       <h1>Exam Inbox</h1>
-      <p class="muted">Every finished signal flow exam lands here. The simulator has scored the blocks it can see: confirm or change them, mark the tutor blocks (stand and mic handling, naming, save and close, packing away, attitude), add a comment and save. The student sees the marked sheet in the exam lesson and in their profile, and gets XP for it.</p>
+      <p class="muted">Every finished signal flow exam lands here. The simulator has scored every block except General attitude, including the stand, shockmount, DAW session and cable coiling: review them, change any score, mark General attitude, add a comment and save. The student sees the marked sheet in the exam lesson and in their profile, and gets XP for it.</p>
       <div class="row wrap"><label class="toggle small"><input type="checkbox" id="only-waiting" checked> Only exams waiting for marks</label><button type="button" class="btn small" id="refresh">↻ Refresh</button></div>
     </section>
     <section id="list" class="card"></section>
     <section id="detail"></section>
   </main>
-  <script type="module" src="js/mark.js?v=202611210112"></script>
+  <script type="module" src="js/mark.js?v=202611210115"></script>
 </body>
 </html>

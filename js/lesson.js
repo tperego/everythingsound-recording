@@ -1,12 +1,12 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210112';
-import { findLesson } from './lessons.js?v=202611210112';
-import { h, store, toast } from './util.js?v=202611210112';
-import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611210112';
-import { examSheet, sheetRows, sheetTotals } from './examsheet.js?v=202611210112';
-import { awardXp, awardZen, enrolled, mySubmissions, submitOnline, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210112';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210115';
+import { findLesson } from './lessons.js?v=202611210115';
+import { h, store, toast } from './util.js?v=202611210115';
+import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611210115';
+import { examSheet, sheetRows, sheetTotals } from './examsheet.js?v=202611210115';
+import { awardXp, awardZen, enrolled, mySubmissions, submitOnline, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210115';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -106,7 +106,7 @@ async function sendExam(ex, d) {
   try {
     await submitOnline({ lessonId: lesson.id, exerciseId: ex.id, exerciseTitle: ex.title, project: null,
       answers: { auto: d.auto, autoMax: d.autoMax, total: d.total, max: d.max }, checks: d.blocks, message: '' });
-    toast('Exam sent to your tutor, who marks the blocks the simulator can’t see.');
+    toast('Exam sent to your tutor.');
     myExams = null; draw();
   } catch (err) { toast(`Your exam wasn’t sent: ${err.message}`); }
 }
@@ -133,7 +133,7 @@ function attemptsBox(ex) {
 
 function examCard(ex) {
   return h('div', {},
-    h('p', { class: 'muted' }, 'The desk starts zeroed with one condenser mic on wall box 1 (Input X = channel 1). Return the DAW on channel 5. When you finish, press End exam on the desk: you pass with 70% of the simulator blocks, and the whole sheet goes to your tutor, who marks the blocks the simulator can’t see and can adjust the rest.'),
+    h('p', { class: 'muted' }, 'The desk starts zeroed with one condenser mic on wall box 1 (Input X = channel 1). Return the DAW on channel 5. When you finish, press End exam on the desk: you pass with 70% of the simulator blocks, and the whole sheet goes to your tutor, who can review any block and marks your general attitude. Everything else, from the stand to the coiled cable, is on the desk: the Live room and DAW tabs.'),
     lastExam ? h('p', {}, h('strong', {}, `Last attempt: ${lastExam.auto} / ${lastExam.autoMax} simulator blocks`), ` · ${lastExam.total} / ${lastExam.max} with tutor marks`) : '',
     h('button', { type: 'button', class: 'btn primary', onclick: () => openDesk(ex, 'desk.html?exam=1#exam') }, lastExam ? 'Take the exam again' : 'Start the exam'),
     attemptsBox(ex));
