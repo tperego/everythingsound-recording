@@ -1,8 +1,8 @@
 // Gamification: levels, streaks and badges, worked out from the student's XP events.
 // XP itself is decided by the database (supabase/game.sql); this file only reads and shows it.
 
-import { COURSE } from './course.js?v=202611200136';
-import { h } from './util.js?v=202611200136';
+import { COURSE } from './course.js?v=202611210011';
+import { h } from './util.js?v=202611210011';
 
 export const LEVELS = COURSE.levels;
 
@@ -28,7 +28,7 @@ const prevDay = (key) => {
 
 /** Days in a row with practice. The streak stays alive until the end of today, even if today has no practice yet. */
 export function streaks(events, now = new Date()) {
-  const days = new Set(events.filter((e) => e.kind !== 'marked').map((e) => dayKey(e.created_at)));
+  const days = new Set(events.filter((e) => e.kind !== 'marked' && !String(e.kind).startsWith('fault-')).map((e) => dayKey(e.created_at)));
   let best = 0;
   for (const d of days) {
     if (days.has(prevDay(d))) continue; // not the start of a run
@@ -59,7 +59,8 @@ export function summarise(events, now = new Date()) {
   return {
     xp,
     week: events.filter((e) => new Date(e.created_at).getTime() > weekAgo).reduce((a, e) => a + (Number(e.xp) || 0), 0),
-    level: levelFor(xp),
+    level: levelFor(Math.max(0, xp)),
+    refs: new Set(events.map((e) => `${e.kind}:${e.ref}`)),
     count: new Proxy(count, { get: (o, k) => o[k] || 0 }),
     lessons,
     desk,
@@ -82,6 +83,8 @@ export function badges() {
     { id: 'fault-finder', icon: '🔧', name: 'Fault finder', how: 'Find and fix a silent channel.', test: desk('trouble') },
     { id: 'exam-pass', icon: '🎓', name: 'Signal flow: passed', how: 'Score 70% or more of the simulator blocks in the exam.', test: (s) => s.count['exam-pass'] >= 1 },
     { id: 'exam-perfect', icon: '🏆', name: 'Clean desk', how: 'Get every simulator block of the exam right.', test: (s) => s.count['exam-perfect'] >= 1 },
+    { id: 'final-test', icon: '🗻', name: 'The final test', how: 'Pass the final 10-question test.', test: (s) => s.refs.has('passed:rec-24-final/final') },
+    { id: 'zen-master', icon: '☯️', name: 'Zen Recording Master', how: 'Pass all three stages of Maestro Zen\'s challenge.', test: desk('zen3') },
     { id: 'feedback', icon: '💌', name: 'Feedback loop', how: 'Get feedback from your teacher.', test: (s) => s.count.marked >= 1 },
     { id: 'streak-3', icon: '🔥', name: 'Warming up', how: 'Practise 3 days in a row.', test: (s) => s.best >= 3 },
     { id: 'streak-7', icon: '🔥', name: 'On fire', how: 'Practise 7 days in a row.', test: (s) => s.best >= 7 },
@@ -115,7 +118,7 @@ export function journeyStrip(s) {
   return h('a', { class: 'journey-strip', href: 'account.html#journey' },
     h('span', { class: 'lvl-badge' }, String(l.n)),
     h('span', { class: 'journey-text' },
-      h('strong', {}, `Level ${l.n} · ${l.name}`),
+      h('strong', {}, `Level ${l.n} · ${l.name}${s.desk.has('zen3') ? ' · ☯️ Zen Master' : ''}`),
       h('span', { class: 'muted small' }, l.next ? `${s.xp} XP · ${l.to - s.xp} to ${l.next}` : `${s.xp} XP · top level!`),
       bar(l)),
     h('span', { class: 'journey-stat' }, h('strong', {}, s.current ? `🔥 ${s.current}` : '🔥 0'), h('span', { class: 'muted small' }, s.practisedToday ? 'day streak' : s.current ? 'practise today to keep it' : 'start a streak today')),
@@ -134,6 +137,8 @@ const KIND_TEXT = {
   'quiz-perfect': 'Perfect round',
   daily: 'Daily practice',
   marked: 'Teacher feedback',
+  'fault-feedback': 'Maestro Zen: feedback loop',
+  'fault-phantom': 'Maestro Zen: phantom power fault',
 };
 
 /** The "My journey" card on the profile page (and, with another title, on the teacher's Students page). */
@@ -208,7 +213,8 @@ export function celebrate({ gained, before, after }) {
     el = h('div', { id: 'xp-pop', role: 'status', 'aria-live': 'polite' });
     document.body.append(el);
   }
-  el.textContent = `+${gained} XP`;
+  el.textContent = gained > 0 ? `+${gained} XP` : `−${-gained} XP`;
+  el.classList.toggle('loss', gained < 0);
   el.classList.remove('show');
   void el.offsetWidth; // restart the animation
   el.classList.add('show');

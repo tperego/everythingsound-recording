@@ -1,7 +1,7 @@
 // The Recording course: modules in order, each listing lesson ids from js/lessons.js.
 
-import { LESSONS, findLesson } from './lessons.js?v=202611200136';
-import { store } from './util.js?v=202611200136';
+import { LESSONS, findLesson } from './lessons.js?v=202611210011';
+import { store } from './util.js?v=202611210011';
 
 export const COURSE = {
   id: 'recording',
@@ -25,6 +25,8 @@ export const COURSE = {
       lessons: ['rec-15-pt-basics', 'rec-16-guide', 'rec-17-edits', 'rec-18-comping', 'rec-19-template'] },
     { title: 'Mixing on the console', intro: 'Dynamics and EQ on the desk, outboard reverb and compression, printing and exporting the mix.',
       lessons: ['rec-20-dyn-eq', 'rec-21-outboard', 'rec-22-print', 'rec-23-atmos'] },
+    { title: 'The Zen Master', intro: 'The final test, then the three-stage challenge of Maestro Zen. Opens when every exercise before it is done.',
+      lessons: ['rec-24-final', 'rec-25-zen'] },
   ],
   // Level names for this course's own XP (parallel to Music Theory's).
   levels: [

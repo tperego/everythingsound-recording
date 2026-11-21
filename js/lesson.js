@@ -1,10 +1,10 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611200136';
-import { findLesson } from './lessons.js?v=202611200136';
-import { h, store, toast } from './util.js?v=202611200136';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611200136';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210011';
+import { findLesson } from './lessons.js?v=202611210011';
+import { h, store, toast } from './util.js?v=202611210011';
+import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210011';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -72,13 +72,20 @@ function quizCard(ex) {
       const ok = v && +v.value === q.ok; if (ok) right++;
       form.querySelector(`#q-${ex.id}-${qi}`).className = `q ${v ? (ok ? 'right' : 'wrong') : ''}`;
     });
-    form.querySelector('.qres').textContent = right === ex.questions.length ? 'All right!' : `${right} of ${ex.questions.length} right. Watch the part again and have another go.`;
-    if (right === ex.questions.length) mark(ex, 'passed', `${lesson.id}/${ex.id}`);
+    const need = ex.pass || ex.questions.length;
+    form.querySelector('.qres').textContent = right === ex.questions.length ? 'All right!'
+      : right >= need ? `${right} of ${ex.questions.length} right: passed.`
+      : `${right} of ${ex.questions.length} right${ex.pass ? ` (${need} to pass)` : ''}. ${lesson.videos.length ? 'Watch the part again and have another go.' : 'Think it through and have another go.'}`;
+    if (right >= need) mark(ex, 'passed', `${lesson.id}/${ex.id}`);
   });
   return form;
 }
 
 function deskCard(ex) {
+  if (ex.after && status()[ex.after] !== 'passed') {
+    const prev = lesson.exercises.find((e) => e.id === ex.after);
+    return h('p', { class: 'muted' }, `🔒 Opens when you pass ${prev ? prev.title.split(' · ')[0] : 'the one before'}.`);
+  }
   const open = () => openDesk(ex, `desk.html?task=${encodeURIComponent(ex.task)}#console`);
   return h('div', { class: 'row wrap' },
     h('button', { type: 'button', class: 'btn primary', onclick: open }, status()[ex.id] === 'passed' ? 'Do it again on the desk' : 'Open on the desk'),
@@ -125,6 +132,8 @@ window.addEventListener('message', (e) => {
   if (e.origin !== location.origin || e.data?.source !== 'es-desk' || !openTask) return;
   const ex = openTask, d = e.data;
   if (d.type === 'close') { closeDesk(true); return; }
+  // Maestro Zen takes XP for faults that would harm gear or ears (feedback, phantom power).
+  if (d.type === 'fault' && (d.kind === 'feedback' || d.kind === 'phantom')) { awardXp(`fault-${d.kind}`, `${lesson.id}/${String(d.line || d.kind).replace(/[^a-z0-9-]/g, '')}`); return; }
   if (d.type === 'task' && ex.kind === 'desk' && d.task === ex.task) { mark(ex, 'desk-task', `${lesson.id}/${ex.task}`); deskDone(`✓ Done: ${ex.title}.`); }
   if (d.type === 'exam' && ex.kind === 'exam') {
     lastExam = { auto: d.auto, autoMax: d.autoMax, total: d.total, max: d.max, at: Date.now() };
@@ -137,7 +146,23 @@ window.addEventListener('message', (e) => {
   }
 });
 
+// Module 6 opens only when the work before it is done: requires 'all' (every exercise before this lesson) or a lesson id.
+function missing() {
+  if (!lesson.requires) return [];
+  const all = courseLessons();
+  const before = lesson.requires === 'all' ? all.slice(0, all.findIndex((l) => l.id === lesson.id)) : [findLesson(lesson.requires)].filter(Boolean);
+  return before.filter((l) => l.exercises.length && lessonProgress(l).done < lessonProgress(l).total);
+}
 function draw() {
+  const miss = missing();
+  if (miss.length) {
+    $('#exercises').replaceChildren(h('section', { class: 'card gate' }, h('h2', {}, '🔒 Not yet'),
+      h('p', { class: 'muted' }, lesson.requires === 'all'
+        ? 'Maestro Zen receives only those who have walked the whole path. Finish every exercise in the course first. Still to do:'
+        : 'Pass the final test first. Maestro Zen does not open his door twice.'),
+      h('ul', {}, miss.map((l) => h('li', {}, h('a', { href: `lesson.html?lesson=${encodeURIComponent(l.id)}` }, l.title), ` · ${lessonProgress(l).done} of ${lessonProgress(l).total} done`)))));
+    return;
+  }
   if (!lesson.exercises.length) {
     const st = status(); if (!st.watched) { st.watched = true; store.set(key, st); }
     $('#exercises').replaceChildren(h('div', { class: 'card' }, h('p', { class: 'muted' }, 'Exercises for this lesson are on the way. Watch the video, then carry on.')));

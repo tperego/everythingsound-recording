@@ -119,6 +119,28 @@ export const LESSONS = [
   { id: 'rec-22-print', title: 'Print and export the mix',
     videos: [V('qdtjcm5g8XA', 'Print the mix'), V('J0eVmGYvDtw', 'Print the mix: quick version', true), V('TswRsK92Rq4', 'Exporting the stereo mix', true)], exercises: [] },
   { id: 'rec-23-atmos', title: 'Binaural listening and Dolby Atmos', videos: [V('1a6rh3AO1S8', 'Binaural listening and Dolby Atmos')], exercises: [] },
+  // ---------------- Module 6: the Zen Master (unlocks when every exercise before it is done) ----------------
+  { id: 'rec-24-final', title: 'The final test', videos: [], requires: 'all',
+    about: 'Ten hard questions on the whole session, from the tie box to the shutdown. Get 9 of 10 right to pass, and Maestro Zen will receive you.',
+    exercises: [
+      { id: 'final', kind: 'quiz', title: 'Ten hard questions', pass: 9, questions: [
+        { q: 'The mic is plugged in on wall box 1 and 48V is on, but channel 1 shows no signal. The channel is on LINE (FLIP unlit). Why?', a: ['The phantom power needs a minute to charge', 'On LINE the channel hears the line input (the DAW return), not the mic: press FLIP', 'The REC master is down'], ok: 1 },
+        { q: 'Why switch 48V on before raising the gain, never after?', a: ['So the meter reads correctly', 'Phantom power arriving at high gain makes a loud thump through everything after the preamp: speakers, headphones, ears', 'Because the gain knob is disabled without 48V'], ok: 1 },
+        { q: 'Channel 5 returns DAW track 1, whose input is channel 1. You route channel 5 to REC instead of MIX. What happens?', a: ['Nothing: REC and MIX are the same', 'The return goes back towards the recording and can loop into itself; and you no longer hear off-tape on the MIX bus', 'The take is recorded twice as loud'], ok: 1 },
+        { q: 'What does off-tape (confidence) monitoring prove that monitoring the REC bus does not?', a: ['That the speakers work', 'That the signal really arrived in the DAW and came back: you hear what is recorded, not what you send', 'That the click is in time'], ok: 1 },
+        { q: 'The singer\'s cue is sent POST fader from channel 5. You pull channel 5 down to talk to the producer. What does the singer hear?', a: ['The same cue as before', 'The vocal disappears from their headphones too: a cue for a performer should be pre-fader', 'Only the click'], ok: 1 },
+        { q: 'ST CUE A AFL shows the vocal and F/B A AFL shows it too, but the singer hears nothing. Where is the fault?', a: ['On the channel cue send', 'After foldback A: the headphone amp (power, the headphones plugged in, the HP A level)', 'In the DAW'], ok: 1 },
+        { q: 'The click comes back on channel 8 with CUE ON and MIX on. Why is that wrong?', a: ['It is not wrong', 'The click goes onto the MIX bus and ends up in the mix and the print: keep it in the cue only, MIX off', 'The click needs to be on REC'], ok: 1 },
+        { q: 'You want the vocal and the snare on one DAW track. On the AWS you…', a: ['Patch both direct outs into one DAW input', 'Route both channels to the same track bus, raise that bus master and patch the bus output to the DAW input', 'Put both on the REC bus and FLIP'], ok: 1 },
+        { q: 'You patch into a fully normalled point on the patchbay. What happens to the original signal?', a: ['It carries on as well as the new patch', 'It is broken: the signal now goes only where you patched it', 'It is doubled'], ok: 1 },
+        { q: 'End of the session with a condenser on channel 1. The safe order is…', a: ['Unplug the mic, then switch 48V off, then the speakers', 'Speakers down or cut, 48V off and wait, then unplug the mic', '48V off, unplug, then the speakers'], ok: 1 },
+      ] }] },
+  { id: 'rec-25-zen', title: 'The challenge of Maestro Zen', videos: [], requires: 'rec-24-final',
+    about: 'Three stages on the desk, no hints, no checklist. Maestro Zen is calm, and he forgives nothing: one fault (phantom power, feedback, a clipping preamp, the click in the mix) and the stage is lost. Pass all three and you are a Zen Recording Master.',
+    exercises: [
+      { id: 'zen1', kind: 'desk', task: 'zen1', title: 'Stage 1 · The silent take' },
+      { id: 'zen2', kind: 'desk', task: 'zen2', title: 'Stage 2 · The singer\'s ears', after: 'zen1' },
+      { id: 'zen3', kind: 'desk', task: 'zen3', title: 'Stage 3 · One take, no mistakes', after: 'zen2' }] },
 ];
 
 export const findLesson = (id) => LESSONS.find((l) => l.id === id) || null;

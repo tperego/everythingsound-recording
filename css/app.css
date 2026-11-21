@@ -714,3 +714,4 @@ a.btn { text-decoration: none; display: inline-block; }
 .lesson-list.compact .lesson-num { width: 28px; height: 28px; font-size: 0.85rem; }
 .lesson-list.compact .ex-dots { margin-top: 4px; }
 #detail { scroll-margin-top: 72px; }
+#xp-pop.loss { background: #c0392b; color: #fff; }

@@ -301,8 +301,35 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .taskok[hidden]{display:none}
 .taskok .b{flex:0 0 auto;padding:6px 12px;background:#fff;color:#1d3a26;border-color:transparent}
 .taskbar.done{border-color:var(--led-green)}
-.exambar{display:flex;gap:12px;align-items:center;padding:8px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-weight:600}
+.exambar{position:sticky;top:0;z-index:30;display:flex;flex-direction:column;gap:6px;padding:10px 14px;border-radius:10px;background:var(--panel);border:2px solid var(--led-amber);box-shadow:0 4px 14px rgba(0,0,0,.25)}
 .exambar .b{flex:0 0 auto;padding:4px 10px}
+.exq-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.exq-head .n{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.8}
+.exq-head b{font-size:14px}
+.exq-head .tot{margin-left:auto;font-family:var(--mono);font-size:12.5px}
+.exq-p{margin:0;max-width:100ch;font-size:13.5px;line-height:1.45}
+.exq-bl{display:flex;flex-wrap:wrap;gap:6px}
+.exq-bl span{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel-2)}
+.exq-bl span.s1{background:var(--led-green);color:#fff;border-color:transparent}
+.exq-bl span.s05{background:#d99a20;color:#fff;border-color:transparent}
+.exq-bl span.s0{background:var(--led-red);color:#fff;border-color:transparent}
+.exq-bl span.t{opacity:.7;font-style:italic}
+.exq-nav{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.exq-nav .dots{display:flex;gap:4px;margin:0 6px}
+.exq-nav .dots button{width:26px;height:22px;padding:0;font-size:11px;border-radius:5px}
+.exq-nav .dots button.cur{outline:2px solid var(--led-amber)}
+.zen{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);margin-bottom:12px}
+.zen[hidden]{display:none}
+.zen svg{flex:0 0 auto;width:58px;height:58px}
+.zen .zb{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
+.zen .zn{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.zen .zt{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;line-height:1.45}
+.zen[data-mood="stern"]{border-color:var(--led-red)}
+.zen[data-mood="stern"] .zt{color:var(--led-red)}
+.zen[data-mood="pleased"]{border-color:var(--led-green)}
+.zen .zx{margin-left:auto;background:none;border:0;color:inherit;font-size:16px;cursor:pointer;opacity:.6}
+.zen .zv{font-size:11px;padding:1px 8px}
+.zen .zpen{font-family:var(--mono);font-style:normal;font-size:12px;color:var(--led-red);font-weight:700}
 .extot{font-family:var(--mono);font-size:14px;font-weight:600;margin:8px 0}
 .extab{display:flex;flex-direction:column;gap:10px}
 .exq{border:1px solid var(--line);border-radius:8px;overflow:hidden}
@@ -386,6 +413,8 @@ button.sc{cursor:pointer;width:100%}
   </div>
 
   <div class="exambar" id="exambar" hidden></div>
+
+  <div class="zen" id="zen" hidden role="status" aria-live="polite"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#2b2620"/><circle cx="32" cy="12" r="6" fill="#d8d2c4"/><ellipse cx="32" cy="33" rx="15" ry="17" fill="#e8c9a0"/><path d="M17 30c2-12 28-12 30 0" fill="#d8d2c4"/><path class="zbrow" d="M22 29q4-2 8 0M34 29q4-2 8 0" stroke="#5a4a3a" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M23 33q3.5 2.5 7 0M34 33q3.5 2.5 7 0" stroke="#3a2e24" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M26 41q6 3 12 0" stroke="#7a4e3a" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M24 44q8 16 16 0q-8 5-16 0z" fill="#d8d2c4"/><path d="M6 58q26-16 52 0" fill="#7a3b2a"/></svg><div class="zb"><div class="zn"><span>Maestro Zen</span><button class="b zv" id="zenVoice" type="button" aria-pressed="false">🔈 Voice off</button><button class="zx" id="zenX" type="button" aria-label="Hide Maestro Zen">×</button></div><div class="zt" id="zenTxt"></div><div class="zpen" id="zenPen" hidden></div></div></div>
 
   <div class="tip" id="tip" aria-live="polite"><b>TIP</b><span>Hover over or focus any control or jack to see what it does. Drag knobs up or down, or use the arrow keys.</span></div>
 
@@ -562,8 +591,11 @@ function defaultState(){
        ret:[7,6,0,0].map(lvl=>({lvl,studio:0,mix:false,rec:false,fba:false,fbb:false}))}};
 }
 let S=defaultState();
+// free play starts as a tracking session: every channel FLIPped to its mic
+S.ch.forEach(c=>c.flip=true);
 const dB=v=>v<=0?'−∞':((v-75)*0.4).toFixed(1).replace('-','−');
 const fdrGain=(v,cut)=>(cut||v<=0)?0:Math.pow(10,((v-75)*0.4)/20);
+const LN=c=>!c.flip; // FLIP off = LINE feeds the channel (the studio default); FLIP on = MIC
 const lvlGain=v=>v<=0?0:Math.pow(v/8,2);
 const dbG=d=>Math.pow(10,d/20);
 
@@ -617,8 +649,8 @@ function pass(F){
     const micLvl=micOk? mf.lvl+c.gain-(c.pad?20:0) : null;
     const lineLvl=lf.sigs.length? lf.lvl+c.trim : null;
     const micSig=micOk?mf.sigs:[], lineSig=lf.sigs;
-    const chIn=c.flip?lineSig:micSig, alt=c.flip?micSig:lineSig, chLvl=c.flip?lineLvl:micLvl;
-    if(!warn && chLvl!==null){ if(chLvl>12) warn=c.flip?'Line input too hot: lower TRIM':'Preamp clipping: lower the gain'; else if(chLvl<-20) warn=c.flip?'Mic‑level signal on the line input':'Input very low: raise the gain'; }
+    const chIn=LN(c)?lineSig:micSig, alt=LN(c)?micSig:lineSig, chLvl=LN(c)?lineLvl:micLvl;
+    if(!warn && chLvl!==null){ if(chLvl>12) warn=LN(c)?'Line input too hot: lower TRIM':'Preamp clipping: lower the gain'; else if(chLvl<-20) warn=LN(c)?'Mic‑level signal on the line input':'Input very low: raise the gain'; }
     let sig=c.imute?[]:chIn;
     F['is'+n]=mk(sig); if(c.ins) sig=feed('ir'+n).sigs;
     const pre=sig, post=fdrGain(c.fader,c.cut)>0?pre:[];
@@ -690,7 +722,7 @@ const TIPS={
   pad:'20 dB pad before the mic preamp.',
   inst:'INST: the preamp listens to the front‑panel instrument jack instead of the mic input. Nothing is plugged into the front jacks here.',
   phase:'Ø: polarity reverse.',
-  flip:'FLIP swaps the inputs. Off: mic feeds the channel and the line input feeds the alternate (EFX) path. On: line feeds the channel (mixing from the DAW) and the mic goes to the EFX path.',
+  flip:'FLIP swaps the inputs. The channel normally sits on LINE: off, the line input (DAW return) feeds the channel and the mic feeds the alternate (EFX) path. Press FLIP to put the mic on the channel for recording; the line input then goes to the EFX path.',
   imute:'Input mute, right after the input stage.',
   dynIP:'DYNAMICS IP: the dynamics sit at the channel input, before the EQ. Order: IP = DYN > EQ > INS; IP + PRE = DYN > INS > EQ. With no switch the order is EQ > DYN > INS.',
   dynOP:'DYNAMICS OP: the dynamics sit at the channel output. Order: OP = EQ > INS > DYN; OP + PRE = INS > DYN > EQ.',
@@ -719,23 +751,23 @@ const TIPS={
   bell:'BELL: changes the shelf into a bell (peaking) curve.',
   cueOn:'Switches the stereo cue send on.', cue:'Cue send level.',
   cuePost:'POST: cue taken after the fader. Off: before the fader, so fader moves do not change the headphone mix.',
-  cueB:'B: send to cue B instead of cue A.', cueEfx:'EFX: the send takes the alternate input, the one NOT feeding the channel path. On mic, EFX sends the line input (DAW return); FLIPped to line, EFX sends the mic. With CUE → TRK on, that signal goes to the track buses.',
+  cueB:'B: send to cue B instead of cue A.', cueEfx:'EFX: the send takes the alternate input, the one NOT feeding the channel path. FLIPped to mic, EFX sends the line input (DAW return); on line (FLIP off), EFX sends the mic. With CUE → TRK on, that signal goes to the track buses.',
   fx1On:'Switches the FX 1/3 send on.', fx1:'FX 1/3 send level, post‑fader.', fx1to3:'Moves the send from FX 1 to FX 3.', fx1Efx:'EFX: send the alternate input.',
   fx2On:'Switches the FX 2/4 send on.', fx2:'FX 2/4 send level, post‑fader.', fx2to4:'Moves the send from FX 2 to FX 4.', fx2Efx:'EFX: send the alternate input.',
   direct:'Direct output source: PRE, POST or EFX. Click to cycle. The direct out of channel n is normalled to DAW input n, so in POST the channel is at the DAW whenever its fader is up. PRE sends it regardless of the fader.',
   rec:'REC: post‑fader to the stereo REC bus.', mix:'MIX: post‑fader to the stereo MIX bus.',
   trk:'Track bus assign. Use the track buses to combine several channels onto one DAW track: patch Track bus n to a DAW input on the patchbay. A single channel reaches its own DAW input through its direct out, with no patching.',
   trkPan:'Track PAN: the channel pan picks odd (left) or even (right) buses of the pair. Centre feeds both.',
-  trkCue:'CUE → TRK: the cue send feeds the track buses instead of the cue bus. The track buses then get whatever the cue send carries, at the CUE level: before or after the fader (POST), or with EFX the alternate input. Typical use: the channel is FLIPped to monitor the DAW return, cue EFX picks up the mic, and CUE → TRK sends that mic to the track bus to record. Cue ON must be lit and the CUE level up.', dirPre:'Direct out PRE: the direct out is taken before the fader. Off (both unlit) = POST, after the fader. Direct out n is normalled to DAW input n.', dirEfx:'Direct out EFX: the direct out carries the alternate input, the one not feeding the channel path (the mic when the channel is FLIPped to line, or the line when it is on mic).',
+  trkCue:'CUE → TRK: the cue send feeds the track buses instead of the cue bus. The track buses then get whatever the cue send carries, at the CUE level: before or after the fader (POST), or with EFX the alternate input. Typical use: the channel is on line (FLIP off) to monitor the DAW return, cue EFX picks up the mic, and CUE → TRK sends that mic to the track bus to record. Cue ON must be lit and the CUE level up.', dirPre:'Direct out PRE: the direct out is taken before the fader. Off (both unlit) = POST, after the fader. Direct out n is normalled to DAW input n.', dirEfx:'Direct out EFX: the direct out carries the alternate input, the one not feeding the channel path (the mic when the channel is FLIPped to line, or the line when it is on mic).',
   trkPre:'Track PRE: track buses fed before the fader, so the fader only changes your monitor mix.',
-  plug:'Plugs this station\'s cable into its wall‑box socket, or pulls it out. Unplugged, the mic line is silent and the console channel it feeds is free, for example to FLIP it to the DAW return.',
+  plug:'Plugs this station\'s cable into its wall‑box socket, or pulls it out. Unplugged, the mic line is silent and the console channel it feeds is free, for example to leave it on LINE (FLIP off) for the DAW return.',
   pan:'Pan.', fader:'Channel fader. Fully down (−∞) means nothing post‑fader.',
   cut:'CUT: mute after the fader. Pre‑fader sends still work.', solo:'SOLO to the PFL or AFL bus.',
   master:'MAIN MIX master fader: the level of the stereo MIX bus after the bus insert and bus compressor. It feeds the mix output, the print recorder and the monitors.',
   mon:'Control‑room monitor source when nothing is soloed.', mcut:'Speaker CUT: silences the control‑room speakers. Nothing else changes.', monLvl:'Control‑room speaker level, in dB. 0 dB is the calibrated listening level.', recMaster:'REC master fader: the level of the stereo REC bus leaving the console (Rec out).', vu:'VU meter: shows the average (RMS) level with slow, 300 ms needle ballistics, like the VU meters on the console. 0 VU = −18 dBFS.', bc:'Bus compressor on the MIX bus, after the MIX insert and before the MIX master fader. The needle shows gain reduction in dB.', bcThr:'Bus compressor threshold.', bcMk:'Bus compressor make‑up gain.', bcRatio:'Bus compressor ratio: 2, 4 or 10 to 1. Click to cycle.', bcAtt:'Bus compressor attack. Click to cycle. 30 ms lets the drum transients through.', bcRel:'Bus compressor release. Click to cycle. AUTO follows the programme.', dynKnob:'Channel compressor control. Applies when DYN IP or OP is pressed on the strip.', dynFast:'FAST attack (1 ms) instead of the normal 10 ms.', cueMeter:'Cue and solo meters: what each cue bus is sending, and what the solo/AFL system is putting on the speakers.', dim:'Dims the speakers.', mono:'Mono check.',
   soloMode:'Channel solo mode. PFL hears before the fader. AFL hears after it.', mixComp:'IN switches the stereo bus compressor into the MIX bus.',
   mixIns:'MIX INS: switches the MIX bus insert return in. Patch outboard on the patchbay.', recIns:'REC INS: switches the REC bus insert return in.',
-  mflip:'Master FLIP: flips all eight channels at once, from recording (mic) to mixing (DAW returns).',
+  mflip:'Master FLIP: flips all eight channels at once, between mic (recording) and line (mixing the DAW returns).',
   cueM:'Cue master level, in dB (0 dB = unity, −∞ = off). Sets the overall level of this cue bus before it feeds the foldbacks and the cue output.',
   fxM:'FX send master level. Sets the level leaving the console to the effect unit.',
   afl:'AFL: listen to this master on the speakers, after its level control.',
@@ -928,7 +960,7 @@ function masterHTML(){
       <div class="mfdr"><span class="fl" id="mfl">REC</span>
         <div class="fader-wrap" data-tip="master" id="mfw" data-label="Master fader">
           <div class="meter"><i id="mfL"></i></div><div class="meter"><i id="mfR"></i></div>
-          <input class="fader" type="range" id="mf" min="0" max="100" step="1" data-path="c.recMaster" aria-label="Master fader">
+          <input class="fader" type="range" id="mf" min="0" max="75" step="1" data-path="c.recMaster" aria-label="Master fader">
         </div><div class="fader-db" id="mfdb" style="width:auto"></div></div></div></div>`;
 }
 con.innerHTML=CHS.map(stripHTML).join('')+centreHTML();
@@ -1043,7 +1075,7 @@ function render(){
   document.querySelectorAll('button[data-ck]').forEach(b=>b.classList.toggle('on',!!S.ch[S.sel][b.dataset.ck]));
   C.ret.forEach((r,k)=>['mix','rec','fba','fbb'].forEach(x=>setOn(`[data-ret="${k}"][data-k="${x}"]`,r[x])));
   $('loopwarn').hidden=!R.loop;
-  examTrack(R);
+  faultWatch(R); examTrack(R);
   drawKnobs(); drawEQ(); drawSchem(R); drawOuts(R); drawEx(R); drawBay(R); drawDAW(R); drawRack(R); drawRoom(R); drawBridge(R); drawExam();
   if(A.ctx) rewire(R);
 }
@@ -1061,9 +1093,9 @@ function drawSchem(R){
   const lName=r.lineFeed.sigs.map(s=>s.name).join(', ')||'nothing playing';
   g+=block(16,22,118,50,'MIC AMP +'+c.gain+(c.pad?' −20':''),mName+(c.phantom?' · 48V':''), micOk?(r.micLvl>12?'stop':'live'):(r.warn&&r.micFeed.sigs.length?'stop':''));
   g+=block(16,96,118,50,'LINE AMP '+fmtL(c.trim).replace(' dB',''),lName.length>22?lName.slice(0,21)+'…':lName, lineOk?'live':'');
-  g+=block(160,46,74,76,'FLIP',c.flip?'line → ch':'mic → ch','');
-  g+=wire('M134 47 H147 V'+(c.flip?100:68)+' H160',micOk);
-  g+=wire('M134 121 H147 V'+(c.flip?68:100)+' H160',lineOk);
+  g+=block(160,46,74,76,'FLIP',LN(c)?'line → ch':'mic → ch','');
+  g+=wire('M134 47 H147 V'+(LN(c)?100:68)+' H160',micOk);
+  g+=wire('M134 121 H147 V'+(LN(c)?68:100)+' H160',lineOk);
   const eqSub=!c.eq?'out':[c.hpf&&'HPF',c.lfG&&'LF',c.lmfG&&'LMF',c.hmfG&&'HMF',c.hfG&&'HF'].filter(Boolean).join(' ')||'in, flat';
   const dynB={t:'DYN '+(c.dyn||''),s:!c.dyn?'not assigned':!S.c.dyn[c.dyn-1].in?'unit out':(c.dynIP?'IP':c.dynOP?'OP':'in'),byp:!dynOn(c)}, insB={t:'INSERT',s:c.ins?'INS in':'out',byp:!c.ins}, eqB={t:'EQ',s:eqSub,byp:!c.eq};
   const proc=procOrder(c).map(p=>p==='dyn'?dynB:p==='eq'?eqB:insB);
@@ -1165,10 +1197,10 @@ const EX=[
    h:'On the patchbay, patch Oscillator to DAW in 8. This breaks the normal from CH 8 direct out.',
    ok:R=>has(R.D.dawi[7],'Oscillator 1 kHz')},
   {t:'Record through the DAW, monitor on a free channel',p:'Record whatever is on wall box 1 into DAW track 1 (CH 1 direct out, normalled to DAW in 1), and monitor the DAW return on CH 4 through the MIX bus.',
-   h:'CH 1: set GAIN, fader up, MIX off. DAW: CLR track 1, input IN 1, output OUT 4, REC arm (or IN). Unplug wall box 4 on the Live room tab so CH 4 is free. CH 4: FLIP, MIX on. Press RECORD.',
-   ok:R=>{ const t=S.daw.tr[0].take, m=mlInfo(1); return !!m&&S.daw.tr[0].inp===1&&S.daw.tr[0].out===4&&S.ch[3].flip&&S.ch[3].mix&&!!t&&t.kind==='buf'&&has(t.sigs,m.name+' (DAW)'); }},
+   h:'CH 1: set GAIN, fader up, MIX off. DAW: CLR track 1, input IN 1, output OUT 4, REC arm (or IN). Unplug wall box 4 on the Live room tab so CH 4 is free. CH 4: FLIP off (line input), MIX on. Press RECORD.',
+   ok:R=>{ const t=S.daw.tr[0].take, m=mlInfo(1); return !!m&&S.daw.tr[0].inp===1&&S.daw.tr[0].out===4&&LN(S.ch[3])&&S.ch[3].mix&&!!t&&t.kind==='buf'&&has(t.sigs,m.name+' (DAW)'); }},
   {t:'Mix the DAW playback',p:'Switch to mixdown: play the DAW and hear the six demo tracks coming back through channels 1–6 in the MIX bus.',
-   h:'Press PLAY on the DAW tab. Press MASTER FLIP so the channels take their line inputs (DAW outputs 1–8), and make sure MIX is on for channels 1–6.',
+   h:'Press PLAY on the DAW tab. Press MASTER FLIP so the channels go back to their line inputs (DAW outputs 1–8, FLIP unlit), and make sure MIX is on for channels 1–6.',
    ok:R=>DAWSET.every(n=>has(R.F.mixo.sigs,n))},
   {t:'Glue the mix with the bus compressor',p:'Put the bus compressor across the MIX bus with the classic drum‑bus setting: ratio 4:1, attack 30 ms, release AUTO.',
    h:'In the centre section, Bus compressor: click the ratio button until it reads 4:1, ATT until 30, REL until AUTO, and press IN. Lower THRESH until the needle moves 2–4 dB with the mix playing.',
@@ -1220,7 +1252,7 @@ const EXB=[
  ['Q1','XLR patched',()=>EXAM.fault.plug48?0:S.room[0].plug?1:null],
  ['Q1','HP patched',()=>S.hp.plugA||S.hp.plugB?1:null],
  ['Q1','HP amp on',()=>S.hp.on?1:null],
- ['Q2','Mic input',R=>!S.ch[XC].flip&&has(R.chans[XC].chIn,VOC)?1:null],
+ ['Q2','Mic input',R=>S.ch[XC].flip&&has(R.chans[XC].chIn,VOC)?1:null],
  ['Q2','Phantom power on',()=>EXAM.fault.p48late?0:S.ch[XC].phantom?1:null],
  ['Q2','Meter CHIP',R=>R.chans[XC].chLvl!==null&&has(R.chans[XC].chIn,VOC)?1:null],
  ['Q2','Preamp level',R=>{ if(EXAM.fault.clip) return 0; const L=R.chans[XC].chLvl; if(L===null||!has(R.chans[XC].chIn,VOC)) return null; return L>=-6&&L<=6?1:0.5; }],
@@ -1230,7 +1262,7 @@ const EXB=[
  ['Q3','New DAW Project',()=>T],['Q3','Mono audio track',()=>T],['Q3','Name',()=>T],
  ['Q3','DAW metering',R=>R.D.dawTr.some((x,k)=>x.monOn&&has(x.inS,VOC))?1:null],
  ['Q3','DAW output',()=>S.daw.tr.some(t=>t.inp===XC+1&&t.out===RC+1)?1:null],
- ['Q3','Off-tape metering',R=>S.ch[RC].flip&&has(R.chans[RC].chIn,VOC)?1:null],
+ ['Q3','Off-tape metering',R=>LN(S.ch[RC])&&has(R.chans[RC].chIn,VOC)?1:null],
  ['Q4','Mix bus allocation',R=>S.ch[RC].mix&&has(R.chans[RC].post,VOC)?1:S.ch[RC].rec&&has(R.chans[RC].post,VOC)?0:null],
  ['Q4','Meter mix bus',R=>has(R.F.mixo.sigs,VOC)&&S.ch[RC].mix?1:null],
  ['Q4','CRM source',()=>S.c.mon==='mix'&&S.ch[RC].mix?1:null],
@@ -1247,7 +1279,7 @@ const EXB=[
  ['Q5','HP levels up',R=>(S.hp.a>0&&has(R.D.pha,VOC))||(S.hp.b>0&&has(R.D.phb,VOC))?1:null],
  ['Q5','Cue mix in cans',R=>has(R.D.pha,VOC)||has(R.D.phb,VOC)?1:null],
  ['Q6','Create click',()=>S.daw.click.on?1:null],
- ['Q6','Output to console',R=>{ const k=S.daw.click.out-1; return k!==XC&&k!==RC&&S.ch[k].flip&&has(R.chans[k].chIn,'Click')?1:null; }],
+ ['Q6','Output to console',R=>{ const k=S.daw.click.out-1; return k!==XC&&k!==RC&&LN(S.ch[k])&&has(R.chans[k].chIn,'Click')?1:null; }],
  ['Q6','Send to cue mix',R=>{ const k=S.daw.click.out-1; if(!has(R.F.cuea.sigs,'Click')&&!has(R.F.cueb.sigs,'Click')) return null; return has(R.F.mixo.sigs,'Click')?0.5:1; }],
  ['Q6','CRM metering',()=>EXAM.ev.clickMeter?1:null],
  ['Q6','CRM monitoring',()=>EXAM.ev.clickHeard?1:null],
@@ -1273,7 +1305,7 @@ function examTrack(R){
   if(S.room[0].plug&&!P.plug&&c.phantom) F.plug48=true;
   if(!S.room[0].plug&&P.plug&&c.phantom) F.unplug48=true;
   if(!c.phantom&&P.ph&&EXAM.q7) ev.p48offSpk=spk();
-  const L=R.chans[XC].chLvl; if(L!==null&&L>12&&!c.flip) F.clip=true;
+  const L=R.chans[XC].chLvl; if(L!==null&&L>12&&!LN(c)) F.clip=true;
   if(S.c.cueA.afl&&has(R.F.cuea.sigs,VOC)) ev.cueMeter=true;
   if(S.c.fbA.afl&&has(R.F.fba.sigs,VOC)||S.c.fbB.afl&&has(R.F.fbb.sigs,VOC)) { ev.fbSolo=true; if(has(R.D.solo,VOC)) ev.fbMeter=true; }
   if(has(R.D.solo,'Click')&&(S.c.cueA.afl||S.c.cueB.afl||S.c.fbA.afl||S.c.fbB.afl)){ ev.clickMeter=true; if(spk()) ev.clickHeard=true; }
@@ -1296,18 +1328,107 @@ function drawExam(){
     max++; if(v!==undefined&&v!==null) (isT?tut+=v:auto+=v);
     if(q!==cur){ if(cur) html+='</div>'; cur=q; html+=`<div class="exq"><h3><span>${q} · ${QT[q]}</span></h3>`; }
     const cls=v===1?'s1':v===0.5?'s05':v===0?'s0':'', txt=v===undefined||v===null?(isT?'tutor':'—'):String(v);
-    const why=(WHY[n]?WHY[n]():'')||(isT?'marked by the tutor':'');
-    html+=`<div class="exr"><span>${n}</span>${isT?`<button class="sc ${cls}" data-exk="${k}" aria-label="Tutor mark for ${n}">${txt}</button>`:`<span class="sc ${cls}">${txt}</span>`}<span class="why">${why}</span></div>`; });
+    const why=(WHY[n]?WHY[n]():'')||(isT?(EMBED?'marked by your tutor in the studio':'tutor: click the score to mark it'):'');
+    html+=`<div class="exr"><span>${n}</span>${isT&&!EMBED?`<button class="sc ${cls}" data-exk="${k}" aria-label="Tutor mark for ${n}">${txt}</button>`:`<span class="sc ${cls}">${txt}</span>`}<span class="why">${why}</span></div>`; });
   html+='</div>';
   $('exTab').innerHTML=EXAM.on||Object.keys(EXAM.best).length?html:'';
   const tot=auto+tut;
   $('exTot').textContent=EXAM.on||Object.keys(EXAM.best).length?`Score ${tot} / ${max}  ·  simulator ${auto}  ·  tutor ${tut}`:'';
-  bar.innerHTML=`<span>Exam running · ${tot} / ${max}</span><button class="b amber" data-goto="exam">Open scoresheet</button>`;
+  drawExamQ(tot,max);
 }
-$('exStart').addEventListener('click',()=>{ if(A.rec) A.rec=null; S=examState(); Object.assign(EXAM,{on:true,best:{},tutor:{},fault:{},ev:{},prev:null,q7:false}); render(); });
+// ---- the question in hand, always on screen while the exam runs ----
+const QORD=['Q1','Q2','Q3','Q4','Q5','Q6','Q7','Q8','Q9'];
+const QP={Q1:'In the live room, put the condenser mic on a boom stand with its shockmount, and patch it to Input X (wall box 1, which feeds channel 1). Give the musician headphones: plug them in and switch the headphone amp on.',
+  Q2:'Bring the mic into channel 1: choose the mic input, phantom power, and set the preamp so the channel meter reads −6 to +6 dB. Send it down the channel path to the REC bus with the fader at 0 dB, and meter it off-bus.',
+  Q3:'In the DAW: a new project with one mono audio track, named. Set its input so you can meter the mic in the DAW. Send the track output to channel 5 and meter it there, off-tape.',
+  Q4:'Put the off-tape signal (channel 5) on the MIX bus and meter it. Choose MIX as the control-room source, check its meter, and listen on the speakers.',
+  Q5:'Build a stereo cue mix for the singer from the off-tape signal: pre-fader, send and master up. Meter the cue, check it in the control room with AFL, then raise the headphone levels so it reaches the cans.',
+  Q6:'Create a click in the DAW and bring it back on a free channel. Send it to the cue mix only, never to the MIX bus. Meter it and listen to it in the control room.',
+  Q7:'Record at least one pass, monitoring off-tape on the MIX bus while you record.',
+  Q8:'Save and close the project. Mute the speakers, switch phantom power off, put every console control back where it started, and switch the headphone amp off.',
+  Q9:'Pack up the live room: mic off the stand first, shockmount away, cables coiled, headphones put away.'};
+const ZQ={Q1:'Before sound, there is the stand. Set it well, and the microphone will trust you.',
+  Q2:'Power, then gain. Never the other way. Watch the meter as you would watch your breath.',
+  Q3:'A track without a name is a thought you will lose. Name it.',
+  Q4:'Do not listen to what you send. Listen to what returns. That is the truth of the take.',
+  Q5:'The singer hears only what you give. Give them the return, before the fader, and check it with your own ears.',
+  Q6:'Time belongs to the singer, not to the mix. The click lives in the cue. Only there.',
+  Q7:'Press record once. Listen as if it were the last take of your life.',
+  Q8:'Silence the speakers before the power leaves. Return every control to where it slept.',
+  Q9:'Mic first, stand after. The cable remembers how you coil it.'};
+EXAM.cur=0;
+function drawExamQ(tot,max){
+  const bar=$('exambar'); if(!EXAM.on){ bar.innerHTML=''; return; }
+  const q=QORD[EXAM.cur], chips=EXB.map((b,k)=>[b,k]).filter(([b])=>b[0]===q).map(([[,n,fn],k])=>{
+    const isT=fn(LAST)===T, v=isT?EXAM.tutor[k]:EXAM.best[k];
+    const cls=isT?'t':v===1?'s1':v===0.5?'s05':v===0?'s0':'';
+    return `<span class="${cls}" title="${(WHY[n]?WHY[n]():'')||(isT?'marked by your tutor':'')}">${n} · ${isT?(v===undefined?'tutor':v):(v===undefined||v===null?'—':v)}</span>`; }).join('');
+  const qdone=k=>EXB.every(([qq,n,fn],i)=>qq!==QORD[k]||fn(LAST)===T||EXAM.best[i]===1);
+  bar.innerHTML=`<div class="exq-head"><span class="n">Exam · question ${EXAM.cur+1} of ${QORD.length}</span><b>${QT[q]}</b><span class="tot">Score ${tot} / ${max}</span></div>
+    <p class="exq-p">${QP[q]}</p><div class="exq-bl">${chips}</div>
+    <div class="exq-nav"><button class="b" data-exq="-1" ${EXAM.cur?'':'disabled'}>← Back</button><span class="dots">${QORD.map((x,k)=>`<button class="b ${k===EXAM.cur?'cur':''} ${qdone(k)?'on':''}" data-exqi="${k}" aria-label="Question ${k+1}">${k+1}</button>`).join('')}</span><button class="b" data-exq="1" ${EXAM.cur<QORD.length-1?'':'disabled'}>Next →</button><button class="b amber" data-goto="exam">Full scoresheet</button></div>`;
+}
+function examGo(k){ k=Math.max(0,Math.min(QORD.length-1,k)); if(k===EXAM.cur) return; EXAM.cur=k; zen(ZQ[QORD[k]],'calm'); drawExam(); }
+$('exambar').addEventListener('click',e=>{ const a=e.target.closest('[data-exq]'), b=e.target.closest('[data-exqi]');
+  if(a) examGo(EXAM.cur+(+a.dataset.exq)); else if(b) examGo(+b.dataset.exqi); });
+$('exStart').addEventListener('click',()=>{ if(A.rec) A.rec=null; S=examState(); Object.assign(EXAM,{on:true,best:{},tutor:{},fault:{},ev:{},prev:null,q7:false,cur:0}); FW.prev=null; zen('The desk is silent. Your mind should be too. '+ZQ.Q1,'calm'); render(); });
 $('exStop').addEventListener('click',()=>{ EXAM.on=false; render(); });
-$('exTab').addEventListener('click',e=>{ const b=e.target.closest('[data-exk]'); if(!b) return; const k=+b.dataset.exk, v=EXAM.tutor[k];
+$('exTab').addEventListener('click',e=>{ const b=e.target.closest('[data-exk]'); if(!b||EMBED) return; const k=+b.dataset.exk, v=EXAM.tutor[k];
   EXAM.tutor[k]=v===undefined?1:v===1?0.5:v===0.5?0:undefined; drawExam(); });
+
+// ================= Maestro Zen =================
+// A calm, philosophical teacher who forgives nothing. He speaks the exam questions, the task results and every fault.
+const ZEN={voice:false,last:'',hideUntilNext:false};
+try{ ZEN.voice=localStorage.getItem('esZenVoice')==='1'; }catch(e){}
+function zenSpeak(text){
+  if(!ZEN.voice||!('speechSynthesis' in window)) return;
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=0.8; u.pitch=0.5;
+    const vs=speechSynthesis.getVoices(), v=vs.find(v=>/^en/i.test(v.lang)&&/daniel|arthur|george|male|fred|ralph/i.test(v.name))||vs.find(v=>/^en/i.test(v.lang)); if(v) u.voice=v;
+    speechSynthesis.speak(u); }catch(e){}
+}
+function zen(text,mood,pen){
+  const el=$('zen'); if(!el||!text) return;
+  el.hidden=false; el.dataset.mood=mood||'calm'; $('zenTxt').textContent=text;
+  $('zenPen').hidden=!pen; $('zenPen').textContent=pen||'';
+  if(text!==ZEN.last) zenSpeak(text); ZEN.last=text;
+}
+function zenVoiceBtn(){ const b=$('zenVoice'); b.textContent=ZEN.voice?'🔊 Voice on':'🔈 Voice off'; b.setAttribute('aria-pressed',ZEN.voice); }
+$('zenVoice').addEventListener('click',()=>{ ZEN.voice=!ZEN.voice; try{ localStorage.setItem('esZenVoice',ZEN.voice?'1':'0'); }catch(e){} zenVoiceBtn(); if(ZEN.voice) zenSpeak($('zenTxt').textContent); else try{ speechSynthesis.cancel(); }catch(e){} });
+$('zenX').addEventListener('click',()=>{ $('zen').hidden=true; try{ speechSynthesis.cancel(); }catch(e){} });
+zenVoiceBtn();
+const ZL={
+  plug48:'You connected a microphone into live phantom power. The capsule forgives nothing. Power off, then connect.',
+  unplug48:'You pulled the cable with forty-eight volts still flowing. That crack is the sound of carelessness. Power off, then disconnect.',
+  p48spk:'You took the phantom power away with the speakers open. The cones felt it. Speakers down first. Always.',
+  loop:'Feedback. The signal is eating its own tail. Pull the last cable. Now.',
+  p48late:'Gain before power. Backwards. The preamp shouted at you. Power first, then gain.',
+  clip:'Red. You were not listening. Lower the gain.',
+};
+// XP lost for the faults that would damage gear or ears in a real studio (sent to the course, which takes the XP)
+const PEN={feedback:15,phantom:20};
+const FW={prev:null,S:null,cool:{}};
+function fault(kind,line){
+  const now=Date.now(); if(FW.cool[line]&&now-FW.cool[line]<4000) return; FW.cool[line]=now;
+  const pen=PEN[kind]&&EMBED?`−${PEN[kind]} XP`:PEN[kind]?`In the course this costs ${PEN[kind]} XP.`:'';
+  zen(ZL[line],'stern',pen);
+  if(PEN[kind]) tell({type:'fault',kind,line});
+  if(typeof TASKS!=='undefined'&&TASK&&TASKS[TASK]&&TASKS[TASK].strict&&!TK.done) TK.failed=TK.failed||ZL[line];
+}
+function faultWatch(R){
+  if(FW.S!==S){ FW.S=S; FW.prev=null; }
+  const now={plug:S.room.map(r=>!!(r&&r.plug)),ph:S.ch.map(c=>c.phantom),loop:!!R.loop,spk:spk(),clip:R.chans.map((x,i)=>x.chLvl!==null&&x.chLvl>12&&!LN(S.ch[i]))};
+  const P=FW.prev;
+  if(P){
+    S.room.forEach((r,n)=>{ if(!r||!S.ch[n]) return;
+      if(now.plug[n]&&!P.plug[n]&&S.ch[n].phantom) fault('phantom','plug48');
+      else if(!now.plug[n]&&P.plug[n]&&P.ph[n]) fault('phantom','unplug48');
+      else if(!now.ph[n]&&P.ph[n]&&now.plug[n]&&r.src&&P.spk) fault('phantom','p48spk');
+      if(now.ph[n]&&!P.ph[n]&&now.plug[n]&&S.ch[n].gain>15&&S.ch[n].flip) fault('','p48late');
+      if(now.clip[n]&&!P.clip[n]) fault('','clip'); });
+    if(now.loop&&!P.loop) fault('feedback','loop');
+  }
+  FW.prev=now;
+}
 
 // ================= patchbay =================
 const CABLE_COL=['#e0533d','#f0a531','#3fa45b','#3f7fd1','#c86fd0','#e8c832','#38b6b0','#ffffff'];
@@ -1496,7 +1617,7 @@ function drawRoom(R){
     if(m){ b+=`<span class="bdg">${r.mic==='di'?'DI':'mic'} level ${fmtL(m.lvl)}</span>`;
       if(!chs.length) b+='<span class="bdg">not on any channel</span>';
       chs.forEach(i=>{ b+=`<span class="bdg">→ CH ${i+1}</span>`; if(m.cond) b+=S.ch[i].phantom?`<span class="bdg ok">48V on</span>`:`<span class="bdg warn">CH ${i+1} needs 48V</span>`; }); }
-    else if(r.src&&!r.plug) b=`<span class="bdg">cable out · mic line ${n} is free</span>`+(chs.length?`<span class="bdg">CH ${chs.map(i=>i+1).join(', ')} free: FLIP it to play from the DAW</span>`:'');
+    else if(r.src&&!r.plug) b=`<span class="bdg">cable out · mic line ${n} is free</span>`+(chs.length?`<span class="bdg">CH ${chs.map(i=>i+1).join(', ')} free: with FLIP off it plays the DAW return</span>`:'');
     else b='<span class="bdg">nothing plugged in</span>';
     $('rb-'+k).innerHTML=b;
     wb+=`<button class="sock ${m?'on':''}" data-plug="${k}" data-tip="plug" data-label="Wall box ${n}" aria-label="Wall box socket ${n}: ${m?m.name+', plugged':'empty'}"><span>${n}</span><span class="h"></span><span>${m?m.name:(r.src&&!r.plug?'unplugged':'—')}</span></button>`;
@@ -1690,7 +1811,7 @@ function rewire(R){
   S.ch.forEach((c,i)=>{ const x=A.ch[i], r=R.chans[i], n=i+1;
     set(x.micPre.gain, r.micLvl===null?0:Math.pow(10,(c.gain-(c.pad?20:0))/20));
     set(x.lineAmp.gain, Math.pow(10,c.trim/20));
-    E(c.flip?x.lineAmp:x.micOut, x.chanIn); E(c.flip?x.micOut:x.lineAmp, x.altOut);
+    E(LN(c)?x.lineAmp:x.micOut, x.chanIn); E(LN(c)?x.micOut:x.lineAmp, x.altOut);
     set(x.phase.gain,c.phase?-1:1); set(x.imute.gain,c.imute?0:1);
     let prev=x.imute;
     procOrder(c).forEach(p=>{
@@ -1795,12 +1916,13 @@ const QS=new URLSearchParams(location.search), TASK=QS.get('task'), EMBED=window
 const tell=msg=>{ if(EMBED) window.parent.postMessage(Object.assign({source:'es-desk'},msg), location.origin); };
 const STEP={
   plug:()=>{ S.room[0].plug=true; S.hp.on=true; S.hp.plugA=true; S.hp.a=6; },
-  gain:()=>{ const c=S.ch[0]; c.phantom=true; const m=mlInfo(1); c.gain=Math.max(15,Math.min(75,Math.round(-m.lvl))); },
+  hpDown:()=>{ S.hp.a=0; },
+  gain:()=>{ const c=S.ch[0]; c.flip=true; c.phantom=true; const m=mlInfo(1); c.gain=Math.max(15,Math.min(75,Math.round(-m.lvl))); },
   recBus:()=>{ const c=S.ch[0]; c.rec=true; c.fader=75; S.c.recMaster=75; },
   dawIn:()=>{ S.daw.tr[0].mon=true; },
-  dawRet:()=>{ S.daw.tr[0].out=5; const c=S.ch[4]; c.flip=true; c.mix=true; c.fader=75; S.c.master=75; S.c.mfSel='mix'; S.c.mon='mix'; S.c.monLvl=8; },
+  dawRet:()=>{ S.daw.tr[0].out=5; const c=S.ch[4]; c.flip=false; c.mix=true; c.fader=75; S.c.master=75; S.c.mfSel='mix'; S.c.mon='mix'; S.c.monLvl=8; },
   cue:()=>{ const c=S.ch[4]; c.cueOn=true; c.cue=8; S.c.cueA.lvl=8; S.c.fbA.cue=true; S.c.fbA.lvl=8; },
-  snare:(plug)=>{ S.room[1]={src:'snare',mic:'dyn',plug}; const c=S.ch[1]; c.gain=40; c.rec=true; c.fader=75; },
+  snare:(plug)=>{ S.room[1]={src:'snare',mic:'dyn',plug}; const c=S.ch[1]; c.flip=true; c.gain=40; c.rec=true; c.fader=75; },
 };
 const ch=k=>LAST.chans[k];
 const TK={tr:{}};
@@ -1809,14 +1931,14 @@ const TASKS={
     p:'The condenser vocal mic is on its stand in the live room, cable coiled at its feet. Plug it into the tie box (wall box 1) with phantom power OFF, switch the headphone amp on and plug headphones A in by the stand.',
     h:'Live room tab: click PLUGGED on station 1 (check CH 1 48V is off first). Under the stations: AMP ON and HP A PLUGGED.',
     ok:R=>!TK.tr.plug48&&S.room[0].plug&&S.hp.on&&S.hp.plugA, bad:()=>TK.tr.plug48?'The mic was plugged in with 48V on: that can damage a condenser. Unplug, switch 48V off, and plug in again.':''},
-  talkback:{t:'Talk to the musician',steps:['plug'],
+  talkback:{t:'Talk to the musician',steps:['plug','hpDown'],
     p:'The singer is wearing headphones A. Use talkback so they hear you: talkback level up, foldback A up, headphone level up, then press TB ALL (or F/B A). The speakers dim while you talk.',
     h:'Centre section, TALKBACK: TB TO F/B up and TB ALL. F/B A: LEVEL up. Live room: HP A level up.',
     ok:R=>has(R.D.pha,'Talkback')},
   gain:{t:'Gain stage the vocal',steps:['plug'],
-    p:'Channel 1 has the condenser vocal on its mic input. Switch on 48V before any gain, then raise the red MIC gain until the channel meter reads between −6 and +6 dB (metering stage 1).',
-    h:'Keep FLIP off (mic). Press 48V first. Then drag the red MIC gain up and watch the readout at the top of the strip.',
-    ok:R=>!TK.tr.late48&&S.ch[0].phantom&&!S.ch[0].flip&&ch(0).chLvl!==null&&ch(0).chLvl>=-6&&ch(0).chLvl<=6,
+    p:'Channel 1 has the condenser vocal on its mic input, but the channel sits on LINE. Press FLIP to put it on MIC, switch on 48V before any gain, then raise the red MIC gain until the channel meter reads between −6 and +6 dB (metering stage 1).',
+    h:'Press FLIP to put the channel on MIC. Press 48V first. Then drag the red MIC gain up and watch the readout at the top of the strip.',
+    ok:R=>!TK.tr.late48&&S.ch[0].phantom&&S.ch[0].flip&&ch(0).chLvl!==null&&ch(0).chLvl>=-6&&ch(0).chLvl<=6,
     bad:()=>TK.tr.late48?'48V went on after the gain was up: a thump straight into the speakers. Turn the gain right down, switch 48V off, and start again.':''},
   'rec-bus':{t:'Send the vocal to the REC bus',steps:['plug','gain'],
     p:'Assign channel 1 to the REC bus, set its fader to 0 dB, then on REC / MIX bus functions select REC and raise the master fader until the REC VU meters move (metering stage 3).',
@@ -1831,9 +1953,9 @@ const TASKS={
     h:'DAW tab: track 1 input IN 1, press IN (or REC to arm).',
     ok:R=>R.D.dawTr[0].monOn&&has(R.D.dawTr[0].inS,'Vocal')},
   'daw-return':{t:'Return the DAW on channel 5 and monitor MIX',steps:['plug','gain','recBus','dawIn'],
-    p:'Send DAW track 1 out to OUT 5. On channel 5 press FLIP (line input), MIX, and fader to 0 dB. Select MIX on the master and raise it, monitor MIX, speakers up. This is confidence monitoring: you hear what is being recorded.',
-    h:'DAW tab: track 1 output OUT 5. CH 5: FLIP, MIX, fader 0. Master: MIX, raise the fader. MONITOR: MIX, level up.',
-    ok:R=>S.daw.tr[0].out===5&&S.ch[4].flip&&S.ch[4].mix&&has(R.F.mixo.sigs,'Vocal')&&S.c.mon==='mix'&&has(R.D.mon,'Vocal')&&S.c.monLvl>0&&!S.c.mcut},
+    p:'Send DAW track 1 out to OUT 5. On channel 5 keep FLIP off (line input), press MIX, and fader to 0 dB. Select MIX on the master and raise it, monitor MIX, speakers up. This is confidence monitoring: you hear what is being recorded.',
+    h:'DAW tab: track 1 output OUT 5. CH 5: FLIP off (line), MIX, fader 0. Master: MIX, raise the fader. MONITOR: MIX, level up.',
+    ok:R=>S.daw.tr[0].out===5&&LN(S.ch[4])&&S.ch[4].mix&&has(R.F.mixo.sigs,'Vocal')&&S.c.mon==='mix'&&has(R.D.mon,'Vocal')&&S.c.monLvl>0&&!S.c.mcut},
   record:{t:'Record a pass while monitoring off-tape',steps:['plug','gain','recBus','dawIn','dawRet'],
     p:'Start the audio, arm track 1 and press RECORD. Keep listening to the MIX bus (off-tape) while the pass records.',
     h:'Press ▶ Start audio at the top. DAW tab: REC on track 1, then ● RECORD, and wait for the pass to finish (about 10 seconds).',
@@ -1842,13 +1964,13 @@ const TASKS={
     p:'Channel 2 should carry the snare mic, gained up and on the REC bus, but its meter shows nothing. Find the fault and fix it, so the snare reaches the REC bus.',
     h:'Work from the source: is the mic plugged in at the tie box? Check the Live room tab.',
     ok:R=>has(ch(1).chIn,'Snare')&&has(R.F.reco.sigs,'Snare')},
-  cue:{t:'A cue mix for the singer',steps:['plug','gain','recBus','dawIn','dawRet'],
-    p:'Build the singer\'s cue from the return channel 5: CUE ON, pre-fader (POST off). Raise ST CUE A and check it with its AFL. On F/B A press CUE A, raise LEVEL and check it with AFL too. The vocal must reach headphones A.',
+  cue:{t:'A cue mix for the singer',steps:['plug','hpDown','gain','recBus','dawIn','dawRet'],
+    p:'Build the singer\'s cue from the return channel 5: CUE ON, pre-fader (POST off). Raise ST CUE A and check it with its AFL. On F/B A press CUE A, raise LEVEL and check it with AFL too. Last, the cue only reaches the singer through the headphone amp: on the Live room tab raise HP A. The vocal must reach headphones A.',
     h:'CH 5: CUE ON. Centre: ST CUE A up, AFL on and off. F/B A: CUE A, LEVEL up, AFL on and off. Live room: HP A level up.',
     ok:R=>S.ch[4].cueOn&&!S.ch[4].cuePost&&!S.ch[0].cueOn&&S.c.fbA.cue&&has(R.D.pha,'Vocal')&&TK.tr.cueAfl&&TK.tr.fbAfl},
   click:{t:'Click in the cue only',steps:['plug','gain','recBus','dawIn','dawRet','cue'],
-    p:'Switch on the DAW click (output 8) and press PLAY. Bring it back on channel 8 (FLIP) and send it to the cue only: CUE ON, MIX off. Check the cue with AFL on F/B A: the singer hears the click, the recording does not.',
-    h:'DAW tab: CLICK, output 8, PLAY. CH 8: FLIP, CUE ON, keep MIX off. F/B A: AFL.',
+    p:'Switch on the DAW click (output 8) and press PLAY. Bring it back on channel 8 (line input, FLIP off) and send it to the cue only: CUE ON, MIX off. Check the cue with AFL on F/B A: the singer hears the click, the recording does not.',
+    h:'DAW tab: CLICK, output 8, PLAY. CH 8: FLIP off (line), CUE ON, keep MIX off. F/B A: AFL.',
     ok:R=>S.daw.click.on&&S.daw.play&&has(R.D.pha,'Click')&&!has(R.F.mixo.sigs,'Click')&&TK.tr.clickAfl,
     bad:R=>has(R.F.mixo.sigs,'Click')?'The click is on the MIX bus: it would end up in the mix. Take MIX off on its channel.':''},
   'trk-bus':{t:'Two channels onto track bus 1 into DAW 7',steps:['plug','gain','snare-on'],
@@ -1856,6 +1978,25 @@ const TASKS={
     h:'Routing 1 on CH 1 and CH 2, both faders to 0.0. TRACK BUS MASTERS: BUS 1 up. Patchbay: Track bus out 1 → DAW inputs 7.',
     ok:R=>has(R.D.dawi[6],'Vocal')&&has(R.D.dawi[6],'Snare')&&cable('tb1','dawi7')},
 };
+// ---- Maestro Zen's challenge: no checklist, no hint, and any fault loses the stage ----
+const nearU=f=>Math.abs(f-75)<=5;
+Object.assign(TASKS,{
+  zen1:{t:'Stage 1 · The silent take',strict:true,steps:['plug','gain','recBus','dawIn','dawRet','zen1Break'],
+    z:'Someone has been at this desk before you. Five things are wrong. Find them in silence.',
+    p:'The vocal is plugged in and gain staged on channel 1. It must reach the DAW through the REC bus with the channel fader at 0 dB, and you must hear it off-tape: DAW track 1 back on channel 5, on the MIX bus, on the speakers. Several things are wrong. Find and fix them. No checklist, no hint.',
+    ok:R=>has(R.F.reco.sigs,'Vocal')&&S.ch[0].rec&&nearU(S.ch[0].fader)&&S.c.recMaster>0&&S.daw.tr[0].out===5&&LN(S.ch[4])&&S.ch[4].mix&&S.c.mon==='mix'&&has(R.D.mon,'Vocal')&&!R.D.anySolo&&spk()},
+  zen2:{t:'Stage 2 · The singer\'s ears',strict:true,steps:['plug','hpDown','gain','recBus','dawIn','dawRet'],
+    z:'The singer cannot see you. They know you only through their headphones. Be worthy of their ears.',
+    p:'Headphones A must carry three things: the vocal from the return channel 5, pre-fader; the DAW click (output 8, on channel 8) in the cue only; and your voice through talkback. Check the foldback with AFL before it reaches the singer. The click must never touch the MIX bus.',
+    watch:R=>has(R.F.mixo.sigs,'Click')?'The click is in the mix. Your mix is now a metronome. The stage is lost.':'',
+    ok:R=>S.ch[4].cueOn&&!S.ch[4].cuePost&&!S.ch[0].cueOn&&has(R.D.pha,'Vocal')&&has(R.D.pha,'Click')&&S.daw.click.on&&S.daw.play&&!!TK.tr.tbHeard&&!!TK.tr.fbAfl},
+  zen3:{t:'Stage 3 · One take, no mistakes',strict:true,steps:[],
+    z:'Everything is at zero, as it was before the first engineer. One take. Then leave the studio as you found it.',
+    p:'The desk and the studio are zeroed; the condenser is on its stand by wall box 1. Plug it in, gain stage it, send it to DAW track 1 and return it on channel 5 on the MIX bus. Give the singer the vocal and the click (channel 8) in headphones A. Record one pass while you monitor off-tape and the singer hears vocal and click. Then shut down: speakers down, 48V off, unplug the mic, headphone amp off.',
+    watch:R=>has(R.F.mixo.sigs,'Click')?'The click is in the mix. One take, and you spent it on a metronome. The stage is lost.':'',
+    ok:R=>S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,'Vocal (DAW)'))&&!!TK.tr.offTape&&!!TK.tr.cueRec&&!S.room[0].plug&&!S.ch[0].phantom&&!S.hp.on},
+});
+STEP.zen1Break=()=>{ S.ch[0].rec=false; S.c.recMaster=0; S.daw.tr[0].out=6; S.ch[4].flip=true; S.c.mon='rec'; };
 STEP['snare-off']=()=>STEP.snare(false); STEP['snare-on']=()=>STEP.snare(true);
 // Live checklist for each task: every line ticks when that step is right; the task is done when all are.
 const nearUnity=f=>Math.abs((f-75)*0.4)<=2;      // within ±2 dB of 0 dB
@@ -1864,15 +2005,15 @@ const spkUp=()=>S.c.monLvl>0&&!S.c.mcut;
 const CHK={
   plug:R=>[['Plugged in with CH 1 48V off',!TK.tr.plug48],['Vocal mic plugged into wall box 1',S.room[0].plug],['Headphone amp on',S.hp.on],['Headphones A plugged in by the stand',S.hp.plugA]],
   talkback:R=>[['Talkback level (TB TO F/B) up',S.c.tb.lvl>0],['TB ALL or F/B A pressed',S.c.tb.all||S.c.tb.fba],['F/B A LEVEL up',S.c.fbA.lvl>0&&!S.c.fbA.cut],['Headphone amp on, HP A level up',S.hp.on&&S.hp.a>0],['Talkback reaches headphones A',has(R.D.pha,'Talkback')]],
-  gain:R=>{ const L=ch(0).chLvl; return [['Input on MIC (FLIP off)',!S.ch[0].flip],['48V on, before raising the gain',S.ch[0].phantom&&!TK.tr.late48],['Channel meter between −6 and +6 dB'+(L===null?' (no signal yet)':' (now '+(L>0?'+':'')+L+' dB)'),L!==null&&L>=-6&&L<=6]]; },
+  gain:R=>{ const L=ch(0).chLvl; return [['FLIP pressed: input on MIC',S.ch[0].flip],['48V on, before raising the gain',S.ch[0].phantom&&!TK.tr.late48],['Channel meter between −6 and +6 dB'+(L===null?' (no signal yet)':' (now '+(L>0?'+':'')+L+' dB)'),L!==null&&L>=-6&&L<=6]]; },
   'rec-bus':R=>[['CH 1 assigned to REC',S.ch[0].rec],['CH 1 fader at 0 dB, ±2'+fdb(S.ch[0].fader),nearUnity(S.ch[0].fader)],['Master fader set to REC (REC / MIX bus)',S.c.mfSel==='rec'],['REC master fader up'+fdb(S.c.recMaster),S.c.recMaster>0],['Vocal on the REC bus VU meters (stage 3)',has(R.F.reco.sigs,'Vocal')]],
   monitor:R=>[['Monitor source: REC',S.c.mon==='rec'],['Nothing soloed or on AFL',!R.D.anySolo],['Vocal on the MONITOR meter (stage 4)',S.c.mon==='rec'&&has(R.D.mon,'Vocal')],['Monitor level up',S.c.monLvl>0],['Speakers not cut',!S.c.mcut]],
   'daw-in':R=>[['Track 1 input: IN 1',S.daw.tr[0].inp===1],['Track 1 input monitoring (IN) or armed (REC)',R.D.dawTr[0].monOn],['Vocal on track 1 meter (stage 2)',R.D.dawTr[0].monOn&&has(R.D.dawTr[0].inS,'Vocal')]],
-  'daw-return':R=>[['Track 1 output: OUT 5',S.daw.tr[0].out===5],['CH 5 FLIP (line input)',S.ch[4].flip],['CH 5 on MIX',S.ch[4].mix],['CH 5 fader up'+fdb(S.ch[4].fader),S.ch[4].fader>0],['Master fader set to MIX and up',S.c.mfSel==='mix'&&S.c.master>0],['Vocal on the MIX bus VU',has(R.F.mixo.sigs,'Vocal')],['Monitor source: MIX, speakers up',S.c.mon==='mix'&&spkUp()],['Vocal heard off-tape',S.c.mon==='mix'&&has(R.D.mon,'Vocal')]],
+  'daw-return':R=>[['Track 1 output: OUT 5',S.daw.tr[0].out===5],['CH 5 on LINE (FLIP off)',LN(S.ch[4])],['CH 5 on MIX',S.ch[4].mix],['CH 5 fader up'+fdb(S.ch[4].fader),S.ch[4].fader>0],['Master fader set to MIX and up',S.c.mfSel==='mix'&&S.c.master>0],['Vocal on the MIX bus VU',has(R.F.mixo.sigs,'Vocal')],['Monitor source: MIX, speakers up',S.c.mon==='mix'&&spkUp()],['Vocal heard off-tape',S.c.mon==='mix'&&has(R.D.mon,'Vocal')]],
   record:R=>[['Audio started (▶ Start audio)',!!A.on],['Track 1 armed or recorded',S.daw.tr[0].arm||!!(S.daw.tr[0].take&&S.daw.tr[0].take.kind==='buf')],['Listening to MIX (off-tape) while recording',!!TK.tr.offTape],['A take of the vocal on track 1',!!(S.daw.tr[0].take&&S.daw.tr[0].take.kind==='buf'&&has(S.daw.tr[0].take.sigs,'Vocal (DAW)'))]],
   trouble:R=>[['Fault found and fixed at the source',S.room[1].plug],['Snare on channel 2',has(ch(1).chIn,'Snare')],['Snare on the REC bus',has(R.F.reco.sigs,'Snare')]],
-  cue:R=>[['CH 5 CUE ON',S.ch[4].cueOn],['Cue pre-fader (POST off)',S.ch[4].cueOn&&!S.ch[4].cuePost],['Cue from the return (CH 1 cue off)',!S.ch[0].cueOn],['ST CUE A up',S.c.cueA.lvl>0],['ST CUE A checked with AFL',!!TK.tr.cueAfl],['F/B A: CUE A on, LEVEL up',S.c.fbA.cue&&S.c.fbA.lvl>0],['F/B A checked with AFL',!!TK.tr.fbAfl],['Vocal in headphones A',has(R.D.pha,'Vocal')]],
-  click:R=>{ const k=S.daw.click.out-1; return [['DAW CLICK on, output 8',S.daw.click.on&&S.daw.click.out===8],['DAW playing',S.daw.play],['CH 8 FLIP (line input)',S.ch[7].flip],['CH 8 CUE ON',S.ch[7].cueOn],['Click NOT on the MIX bus',!has(R.F.mixo.sigs,'Click')],['Click checked with AFL on F/B A',!!TK.tr.clickAfl],['Click in headphones A',has(R.D.pha,'Click')]]; },
+  cue:R=>[['CH 5 CUE ON',S.ch[4].cueOn],['Cue pre-fader (POST off)',S.ch[4].cueOn&&!S.ch[4].cuePost],['Cue from the return (CH 1 cue off)',!S.ch[0].cueOn],['ST CUE A up',S.c.cueA.lvl>0],['ST CUE A checked with AFL',!!TK.tr.cueAfl],['F/B A: CUE A on, LEVEL up',S.c.fbA.cue&&S.c.fbA.lvl>0],['F/B A checked with AFL',!!TK.tr.fbAfl],['Headphone amp: HP A level up (Live room tab)',S.hp.on&&S.hp.plugA&&S.hp.a>0],['Vocal in headphones A',has(R.D.pha,'Vocal')]],
+  click:R=>{ const k=S.daw.click.out-1; return [['DAW CLICK on, output 8',S.daw.click.on&&S.daw.click.out===8],['DAW playing',S.daw.play],['CH 8 on LINE (FLIP off)',LN(S.ch[7])],['CH 8 CUE ON',S.ch[7].cueOn],['Click NOT on the MIX bus',!has(R.F.mixo.sigs,'Click')],['Click checked with AFL on F/B A',!!TK.tr.clickAfl],['Click in headphones A',has(R.D.pha,'Click')]]; },
   'trk-bus':R=>[['CH 1 on track bus 1',S.ch[0].trk.includes(1)],['CH 2 on track bus 1',S.ch[1].trk.includes(1)],['Both faders up',S.ch[0].fader>0&&S.ch[1].fader>0],['BUS 1 master up',S.c.trkM[0].lvl>0],['Patched: Track bus 1 out → DAW in 7',cable('tb1','dawi7')],['Vocal and snare at DAW in 7',has(R.D.dawi[6],'Vocal')&&has(R.D.dawi[6],'Snare')]],
 };
 
@@ -1886,32 +2027,43 @@ function taskTrack(R){
   if(S.c.cueA.afl&&has(R.F.cuea.sigs,'Vocal')) T.cueAfl=true;
   if(S.c.fbA.afl&&has(R.F.fba.sigs,'Vocal')) T.fbAfl=true;
   if(S.c.fbA.afl&&has(R.D.solo,'Click')) T.clickAfl=true;
+  if(has(R.D.pha,'Talkback')) T.tbHeard=true;
+  if(A.rec&&!A.rec.done&&has(R.D.pha,'Vocal')&&has(R.D.pha,'Click')) T.cueRec=true;
   TK.prev={plug:S.room[0].plug,ph:c.phantom};
 }
 function drawTask(R){
   const T=TASKS[TASK]; if(!T) return; taskTrack(R);
-  const list=CHK[TASK]?CHK[TASK](R):[], bad=T.bad?T.bad(R):'', ok=!bad&&(list.length?list.every(x=>x[1]):!!T.ok(R));
-  $('taskchk').innerHTML=list.map(([l,v])=>`<li class="${v?'y':''}"><span aria-hidden="true">${v?'✓':'○'}</span> ${l}</li>`).join('');
-  $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':bad?'Fix this first':'In progress';
-  $('taskbad').textContent=bad; $('taskbad').hidden=!bad; $('taskok').hidden=!ok;
+  if(T.strict&&!TK.done&&!TK.failed&&T.watch){ const w=T.watch(R); if(w){ TK.failed=w; zen(w,'stern'); } }
+  const failed=T.strict&&TK.failed;
+  const list=CHK[TASK]?CHK[TASK](R):[], bad=failed?TK.failed:T.bad?T.bad(R):'', ok=!bad&&(list.length?list.every(x=>x[1]):!!T.ok(R));
+  if(bad&&bad!==TK.saidBad){ TK.saidBad=bad; if(!failed) zen(bad,'stern'); } else if(!bad) TK.saidBad='';
+  if(failed&&!TK.saidFail){ TK.saidFail=true; tell({type:'zen-fail',task:TASK}); }
+  if($('taskchk')) $('taskchk').innerHTML=list.map(([l,v])=>`<li class="${v?'y':''}"><span aria-hidden="true">${v?'✓':'○'}</span> ${l}</li>`).join('');
+  $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':failed?'Stage lost':bad?'Fix this first':'In progress';
+  $('taskbad').innerHTML=''; $('taskbad').textContent=failed?'Maestro Zen: '+bad+' ':bad; $('taskbad').hidden=!bad;
+  if(failed){ const b=document.createElement('button'); b.className='b'; b.type='button'; b.textContent='Begin the stage again'; b.onclick=()=>location.reload(); $('taskbad').append(b); } $('taskok').hidden=!ok;
   if(!EMBED) $('taskok').textContent='✓ Task done. Go back to your lesson for the next task, or keep exploring.';
   if(ok&&!TK.shownOk){ TK.shownOk=true; document.querySelector('.taskbar').scrollIntoView({behavior:'smooth',block:'start'}); }
   document.querySelector('.taskbar').classList.toggle('done',ok);
-  if(ok&&!TK.done){ TK.done=true; tell({type:'task',task:TASK,done:true}); }
+  if(ok&&!TK.done){ TK.done=true; tell({type:'task',task:TASK,done:true});
+    zen(TASK==='zen3'?'One take. No mistakes. The desk is quiet again, and so are you. You are a Zen Recording Master.':T.strict?'Good. You did not hurry, and you did not err. The next stage waits.':'Good. Now close the desk, and walk on.','pleased'); }
 }
 if(TASK&&TASKS[TASK]){
   const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); TK.done=false;
   const bar=document.createElement('section'); bar.className='taskbar'; bar.setAttribute('aria-label','Task');
-  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p><ul class="taskchk" id="taskchk" aria-label="Steps"></ul><p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden><span>✓ Task done: it is ticked off in your lesson.</span>${EMBED?'<button class="b" id="taskclose" type="button">Close the desk and continue →</button>':''}</p><details><summary>Hint</summary>${T.h}</details>`;
+  bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p>${T.strict?'':'<ul class="taskchk" id="taskchk" aria-label="Steps"></ul>'}<p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden><span>✓ Task done: it is ticked off in your lesson.</span>${EMBED?'<button class="b" id="taskclose" type="button">Close the desk and continue →</button>':''}</p>${T.h?`<details><summary>Hint</summary>${T.h}</details>`:''}`;
   document.querySelector('.tabs').before(bar);
   bar.addEventListener('click',e=>{ if(e.target.id==='taskclose') tell({type:'close'}); });
   const _render=render; render=function(){ _render(); drawTask(LAST); };
+  zen(T.z||'Read the task. Do only what it asks, and do it exactly.','calm');
 }
 // From a lesson (a task or the exam): the trainer's own free-practice exercises would only confuse, so hide them.
 if(TASK||QS.get('exam')){ $('excard').hidden=true; $('excard').parentElement.classList.add('one'); }
 if(QS.get('exam')){ $('exStart').click(); setTimeout(()=>showView('exam'),0); }
 $('exStop').addEventListener('click',()=>{ let auto=0,autoMax=0,tot=0; EXB.forEach(([q,n,fn],k)=>{ const isT=fn(LAST)===T; if(!isT){ autoMax++; auto+=EXAM.best[k]||0; } tot+=(isT?EXAM.tutor[k]:EXAM.best[k])||0; });
-  tell({type:'exam',auto,autoMax,total:tot,max:EXB.length}); });
+  tell({type:'exam',auto,autoMax,total:tot,max:EXB.length});
+  const r=autoMax?auto/autoMax:0;
+  zen(auto===autoMax?'Every block, clean. Now do it again, and it will become practice.':r>=0.7?`${auto} of ${autoMax}. Seventy is a door, not a home. You may pass. Come back for the rest.`:`${auto} of ${autoMax}. Not yet. The desk is patient. Are you?`,auto===autoMax?'pleased':r>=0.7?'calm':'stern'); });
 
 render();
 showView(location.hash.slice(1)||'console');
