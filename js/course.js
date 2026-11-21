@@ -1,7 +1,7 @@
 // The Recording course: modules in order, each listing lesson ids from js/lessons.js.
 
-import { LESSONS, findLesson } from './lessons.js?v=202611210141';
-import { store } from './util.js?v=202611210141';
+import { LESSONS, findLesson } from './lessons.js?v=202611212357';
+import { store } from './util.js?v=202611212357';
 
 export const COURSE = {
   id: 'recording',
@@ -19,7 +19,7 @@ export const COURSE = {
       lessons: ['rec-01-cables', 'rec-02-stands-mics', 'rec-03-tie-box'] },
     { title: 'Control room signal flow', intro: 'Gain staging, the four metering stages, Pro Tools in and out, confidence monitoring, cues, foldback, the patchbay and the exam.',
       lessons: ['rec-04-gain-staging', 'rec-05-metering', 'rec-06-pro-tools', 'rec-07-troubleshooting', 'rec-08-cues', 'rec-09-patchbay', 'rec-10-exam'] },
-    { title: 'Microphones', intro: 'Mic types, the classics, polar patterns, stereo techniques and drum set-ups. Exercises with the mic simulator are on the way.',
+    { title: 'Microphones', intro: 'Mic types, the classics, polar patterns, stereo techniques and drum set-ups.',
       lessons: ['rec-11-mics', 'rec-12-polar', 'rec-13-stereo', 'rec-14-drums'] },
     { title: 'Pro Tools', intro: 'Basic operations, guide tracks, editing, comping, templates and automation.',
       lessons: ['rec-15-pt-basics', 'rec-16-guide', 'rec-17-edits', 'rec-18-comping', 'rec-19-template'] },
