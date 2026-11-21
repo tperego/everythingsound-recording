@@ -1,10 +1,11 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210034';
-import { findLesson } from './lessons.js?v=202611210034';
-import { h, store, toast } from './util.js?v=202611210034';
-import { awardXp, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210034';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611210048';
+import { findLesson } from './lessons.js?v=202611210048';
+import { h, store, toast } from './util.js?v=202611210048';
+import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611210048';
+import { awardXp, awardZen, enrolled, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611210048';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -112,6 +113,7 @@ function closeDesk(goNext = false) {
   const ex = openTask;
   $('#deskwrap').hidden = true; $('#desk').src = 'about:blank'; openTask = null;
   if (!goNext) return;
+  if (lesson.zen) { document.querySelector('.zen-stage')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   // Scroll to the next exercise not done yet, or to the lesson navigation when all are done.
   const i = lesson.exercises.indexOf(ex);
   const next = lesson.exercises.findIndex((e, k) => k > i && status()[e.id] !== 'passed');
@@ -135,6 +137,13 @@ window.addEventListener('message', (e) => {
   if (d.type === 'close') { closeDesk(true); return; }
   // Maestro Zen takes XP for faults that would harm gear or ears (feedback, phantom power).
   if (d.type === 'fault' && (d.kind === 'feedback' || d.kind === 'phantom')) { awardXp(`fault-${d.kind}`, `${lesson.id}/${String(d.line || d.kind).replace(/[^a-z0-9-]/g, '')}`); return; }
+  if (d.type === 'zen-fail' && lesson.zen) { zen.failed = true; zen.line = pick(WRONG); draw(); return; }
+  if (d.type === 'task' && ex.kind === 'desk' && d.task === ex.task && lesson.zen) {
+    zen.failed = false;
+    const won = lesson.exercises.every((e) => e === ex || status()[e.id] === 'passed');
+    zen.line = won ? WON : pick(PASSED);
+    if (won) awardZen();
+  }
   if (d.type === 'task' && ex.kind === 'desk' && d.task === ex.task) { mark(ex, 'desk-task', `${lesson.id}/${ex.task}`); deskDone(`✓ Done: ${ex.title}.`); }
   if (d.type === 'exam' && ex.kind === 'exam') {
     lastExam = { auto: d.auto, autoMax: d.autoMax, total: d.total, max: d.max, at: Date.now() };
@@ -147,6 +156,29 @@ window.addEventListener('message', (e) => {
   }
 });
 
+// ---------- Maestro Zen's challenge: the same Master as in Music Theory, three gates on the desk ----------
+const zen = { failed: false, line: '' };
+function masterEl(small) { const m = h('div', { class: 'zen-master', 'aria-hidden': 'true' }); m.innerHTML = MASTER_SVG; return m; }
+function zenStage() {
+  const exs = lesson.exercises, st = status();
+  const cur = exs.findIndex((e) => st[e.id] !== 'passed'); // -1: all three gates passed
+  const master = masterEl(), words = h('blockquote', { class: 'zen-words', 'aria-live': 'polite' });
+  const name = (e) => e.title.split(' · ')[1] || e.title;
+  const gates = h('ol', { class: 'zen-gates', 'aria-label': 'The three gates' }, exs.map((e, i) => h('li', {
+    class: `zen-gate${cur < 0 || i < cur ? ' passed' : ''}${i === cur ? ' current' : ''}${i === cur && zen.failed ? ' failed' : ''}`,
+  }, h('span', { class: 'zen-gate-n' }, cur < 0 || i < cur ? '✓' : String(i + 1)), h('span', {}, name(e)))));
+  const enter = (i, label, cls = 'btn primary') => h('button', { type: 'button', class: cls, onclick: () => openDesk(exs[i], `desk.html?task=${encodeURIComponent(exs[i].task)}#console`) }, label);
+  const actions = h('div', { class: 'row wrap', id: 'zen-actions' },
+    cur < 0 ? h('div', { class: 'zen-won' }, h('span', { class: 'zen-won-icon' }, '☯️'), h('div', {}, h('strong', {}, 'Zen Recording Master'), h('div', { class: 'muted small' }, 'All three gates passed.')))
+      : enter(cur, zen.failed ? `Begin gate ${cur + 1} again` : `Enter gate ${cur + 1}: ${name(exs[cur])}`),
+    ...(teacher ? exs.map((e, i) => enter(i, `Try gate ${i + 1}`, 'btn small ghost')) : []));
+  const voice = h('label', { class: 'toggle small zen-voice' }, h('input', { type: 'checkbox', checked: voiceOn(), onchange: (e) => setVoice(e.target.checked) }), ' The Master speaks aloud');
+  const card = h('section', { class: 'card zen-stage' }, master, h('div', { class: 'zen-talk' },
+    h('p', { class: 'eyebrow' }, 'Maestro Zen, master of the studio'), words, gates, actions, voice));
+  setTimeout(() => say(master, words, zen.line || (cur < 0 ? WON : INTRO)), 0);
+  return card;
+}
+
 // Module 6 opens only when the work before it is done: requires 'all' (every exercise before this lesson) or a lesson id.
 function missing() {
   if (!lesson.requires || teacher) return [];
@@ -157,7 +189,9 @@ function missing() {
 function draw() {
   const miss = missing();
   if (miss.length) {
-    $('#exercises').replaceChildren(h('section', { class: 'card gate' }, h('h2', {}, '🔒 Not yet'),
+    const m = masterEl(), w = h('p', { class: 'zen-words' });
+    setTimeout(() => say(m, w, LOCKED), 0);
+    $('#exercises').replaceChildren(h('section', { class: 'card zen-home' }, m, w), h('section', { class: 'card gate' }, h('h2', {}, '🔒 Not yet'),
       h('p', { class: 'muted' }, lesson.requires === 'all'
         ? 'Maestro Zen receives only those who have walked the whole path. Finish every exercise in the course first. Still to do:'
         : 'Pass the final test first. Maestro Zen does not open his door twice.'),
@@ -171,6 +205,7 @@ function draw() {
   }
   const note = teacher && (lesson.requires || lesson.exercises.some((e) => e.after))
     ? h('p', { class: 'muted small' }, 'Teacher preview: everything here is unlocked for you. Students must finish the course first, and pass each stage before the next.') : '';
+  if (lesson.zen) { $('#exercises').replaceChildren(note, zenStage()); return; }
   $('#exercises').replaceChildren(note, ...lesson.exercises.map((ex, i) => {
     const done = status()[ex.id] === 'passed';
     return h('section', { class: `card ex ${done ? 'done' : ''}` },

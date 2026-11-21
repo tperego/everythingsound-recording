@@ -320,15 +320,31 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .exq-nav .dots button.cur{outline:2px solid var(--led-amber)}
 .zen{display:flex;gap:12px;align-items:flex-start;padding:10px 14px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);margin-bottom:12px}
 .zen[hidden]{display:none}
-.zen svg{flex:0 0 auto;width:58px;height:58px}
+.zen .zen-master{flex:0 0 auto;width:76px}
+.zen .zen-master svg{width:76px;height:76px;display:block}
+.zm-aura{fill:rgba(232,116,59,.12)}
+.zen-master.speaking .zm-aura{animation:zen-breathe 2.4s ease-in-out infinite}
+@keyframes zen-breathe{50%{fill:rgba(232,116,59,.28)}}
+.zm-robe{fill:#e8743b}
+.zm-robe-fold{stroke:rgba(0,0,0,.18);stroke-width:2;fill:none}
+.zm-hands,.zm-head,.zm-ear{fill:#e9c39b}
+.zm-hands{stroke:rgba(0,0,0,.12)}
+.zm-brow,.zm-brow-long,.zm-moustache{stroke:#f4f1ea;stroke-width:3;fill:none;stroke-linecap:round}
+.zm-eye{stroke:#3b2f25;stroke-width:2;fill:none;stroke-linecap:round}
+.zm-beard{fill:#f4f1ea;stroke:rgba(0,0,0,.12)}
+.zm-mouth{fill:#3b2f25;transform-origin:80px 76px}
+.zen-master.speaking .zm-mouth{animation:zen-talk .32s ease-in-out infinite alternate}
+@keyframes zen-talk{to{transform:scaleY(3)}}
+.zen .zt.in{animation:zen-in .6s ease-out}
+@keyframes zen-in{from{opacity:0;transform:translateY(4px)}}
 .zen .zb{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
 .zen .zn{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.zen .zt{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;line-height:1.45}
+.zen .zt{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:18px;line-height:1.35}
 .zen[data-mood="stern"]{border-color:var(--led-red)}
 .zen[data-mood="stern"] .zt{color:var(--led-red)}
 .zen[data-mood="pleased"]{border-color:var(--led-green)}
 .zen .zx{margin-left:auto;background:none;border:0;color:inherit;font-size:16px;cursor:pointer;opacity:.6}
-.zen .zv{font-size:11px;padding:1px 8px}
+.zen .zv{flex:0 0 auto;font-size:11px;padding:1px 8px}
 .zen .zpen{font-family:var(--mono);font-style:normal;font-size:12px;color:var(--led-red);font-weight:700}
 .extot{font-family:var(--mono);font-size:14px;font-weight:600;margin:8px 0}
 .extab{display:flex;flex-direction:column;gap:10px}
@@ -414,7 +430,7 @@ button.sc{cursor:pointer;width:100%}
 
   <div class="exambar" id="exambar" hidden></div>
 
-  <div class="zen" id="zen" hidden role="status" aria-live="polite"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="#2b2620"/><circle cx="32" cy="12" r="6" fill="#d8d2c4"/><ellipse cx="32" cy="33" rx="15" ry="17" fill="#e8c9a0"/><path d="M17 30c2-12 28-12 30 0" fill="#d8d2c4"/><path class="zbrow" d="M22 29q4-2 8 0M34 29q4-2 8 0" stroke="#5a4a3a" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M23 33q3.5 2.5 7 0M34 33q3.5 2.5 7 0" stroke="#3a2e24" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M26 41q6 3 12 0" stroke="#7a4e3a" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M24 44q8 16 16 0q-8 5-16 0z" fill="#d8d2c4"/><path d="M6 58q26-16 52 0" fill="#7a3b2a"/></svg><div class="zb"><div class="zn"><span>Maestro Zen</span><button class="b zv" id="zenVoice" type="button" aria-pressed="false">🔈 Voice off</button><button class="zx" id="zenX" type="button" aria-label="Hide Maestro Zen">×</button></div><div class="zt" id="zenTxt"></div><div class="zpen" id="zenPen" hidden></div></div></div>
+  <div class="zen" id="zen" hidden role="status" aria-live="polite"><div class="zen-master" id="zenMaster" aria-hidden="true"><svg viewBox="0 0 160 160"><circle class="zm-aura" cx="80" cy="78" r="70"/><path class="zm-robe" d="M20 150 C 24 104, 50 88, 80 88 C 110 88, 136 104, 140 150 Z"/><path class="zm-robe-fold" d="M80 92 L 66 150 M80 92 L 98 150"/><ellipse class="zm-hands" cx="80" cy="128" rx="20" ry="7"/><circle class="zm-head" cx="80" cy="58" r="26"/><ellipse class="zm-ear" cx="54" cy="60" rx="4" ry="7"/><ellipse class="zm-ear" cx="106" cy="60" rx="4" ry="7"/><path class="zm-brow" d="M62 50 q 8 -6 15 0 M83 50 q 7 -6 15 0"/><path class="zm-brow-long" d="M62 50 q -8 2 -12 12 M98 50 q 8 2 12 12"/><path class="zm-eye" d="M65 58 q 6 4 11 0 M84 58 q 6 4 11 0"/><path class="zm-beard" d="M62 70 C 64 96, 96 96, 98 70 C 92 80, 68 80, 62 70 Z"/><path class="zm-moustache" d="M68 70 q 12 -6 24 0"/><ellipse class="zm-mouth" cx="80" cy="76" rx="4" ry="1"/></svg></div><div class="zb"><div class="zn"><span>Maestro Zen</span><button class="b zv" id="zenVoice" type="button" aria-pressed="false">🔈 Voice off</button><button class="zx" id="zenX" type="button" aria-label="Hide Maestro Zen">×</button></div><div class="zt" id="zenTxt"></div><div class="zpen" id="zenPen" hidden></div></div></div>
 
   <div class="tip" id="tip" aria-live="polite"><b>TIP</b><span>Hover over or focus any control or jack to see what it does. Drag knobs up or down, or use the arrow keys.</span></div>
 
@@ -1347,15 +1363,15 @@ const QP={Q1:'In the live room, put the condenser mic on a boom stand with its s
   Q7:'Record at least one pass, monitoring off-tape on the MIX bus while you record.',
   Q8:'Save and close the project. Mute the speakers, switch phantom power off, put every console control back where it started, and switch the headphone amp off.',
   Q9:'Pack up the live room: mic off the stand first, shockmount away, cables coiled, headphones put away.'};
-const ZQ={Q1:'Before sound, there is the stand. Set it well, and the microphone will trust you.',
-  Q2:'Power, then gain. Never the other way. Watch the meter as you would watch your breath.',
+const ZQ={Q1:'Before sound, the stand. Set it well. The microphone will trust you.',
+  Q2:'Power, then gain. Never the other way.',
   Q3:'A track without a name is a thought you will lose. Name it.',
-  Q4:'Do not listen to what you send. Listen to what returns. That is the truth of the take.',
-  Q5:'The singer hears only what you give. Give them the return, before the fader, and check it with your own ears.',
-  Q6:'Time belongs to the singer, not to the mix. The click lives in the cue. Only there.',
-  Q7:'Press record once. Listen as if it were the last take of your life.',
-  Q8:'Silence the speakers before the power leaves. Return every control to where it slept.',
-  Q9:'Mic first, stand after. The cable remembers how you coil it.'};
+  Q4:'Do not listen to what you send. Listen to what returns.',
+  Q5:'The singer hears only what you give. Check it with your own ears first.',
+  Q6:'The click lives in the cue. Only there.',
+  Q7:'One take. Listen as if it were the last.',
+  Q8:'Speakers down before the power leaves. Every control back where it slept.',
+  Q9:'Mic first. Stand after. The cable remembers how you coil it.'};
 EXAM.cur=0;
 function drawExamQ(tot,max){
   const bar=$('exambar'); if(!EXAM.on){ bar.innerHTML=''; return; }
@@ -1371,7 +1387,7 @@ function drawExamQ(tot,max){
 function examGo(k){ k=Math.max(0,Math.min(QORD.length-1,k)); if(k===EXAM.cur) return; EXAM.cur=k; zen(ZQ[QORD[k]],'calm'); drawExam(); }
 $('exambar').addEventListener('click',e=>{ const a=e.target.closest('[data-exq]'), b=e.target.closest('[data-exqi]');
   if(a) examGo(EXAM.cur+(+a.dataset.exq)); else if(b) examGo(+b.dataset.exqi); });
-$('exStart').addEventListener('click',()=>{ if(A.rec) A.rec=null; S=examState(); Object.assign(EXAM,{on:true,best:{},tutor:{},fault:{},ev:{},prev:null,q7:false,cur:0}); FW.prev=null; zen('The desk is silent. Your mind should be too. '+ZQ.Q1,'calm'); render(); });
+$('exStart').addEventListener('click',()=>{ if(A.rec) A.rec=null; S=examState(); Object.assign(EXAM,{on:true,best:{},tutor:{},fault:{},ev:{},prev:null,q7:false,cur:0}); FW.prev=null; zen('Nine questions. The desk is silent. So are you. '+ZQ.Q1,'calm'); render(); });
 $('exStop').addEventListener('click',()=>{ EXAM.on=false; render(); });
 $('exTab').addEventListener('click',e=>{ const b=e.target.closest('[data-exk]'); if(!b||EMBED) return; const k=+b.dataset.exk, v=EXAM.tutor[k];
   EXAM.tutor[k]=v===undefined?1:v===1?0.5:v===0.5?0:undefined; drawExam(); });
@@ -1379,30 +1395,31 @@ $('exTab').addEventListener('click',e=>{ const b=e.target.closest('[data-exk]');
 // ================= Maestro Zen =================
 // A calm, philosophical teacher who forgives nothing. He speaks the exam questions, the task results and every fault.
 const ZEN={voice:false,last:'',hideUntilNext:false};
-try{ ZEN.voice=localStorage.getItem('esZenVoice')==='1'; }catch(e){}
+try{ const v=localStorage.getItem('es.zen.voice'); ZEN.voice=v==null?true:JSON.parse(v)!==false; }catch(e){ ZEN.voice=true; } // same setting as the course pages
 function zenSpeak(text){
-  if(!ZEN.voice||!('speechSynthesis' in window)) return;
-  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=0.8; u.pitch=0.5;
-    const vs=speechSynthesis.getVoices(), v=vs.find(v=>/^en/i.test(v.lang)&&/daniel|arthur|george|male|fred|ralph/i.test(v.name))||vs.find(v=>/^en/i.test(v.lang)); if(v) u.voice=v;
-    speechSynthesis.speak(u); }catch(e){}
+  const m=$('zenMaster'); m.classList.add('speaking'); const stop=()=>m.classList.remove('speaking');
+  if(!ZEN.voice||!('speechSynthesis' in window)){ setTimeout(stop,400+text.length*45); return; }
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.rate=0.72; u.pitch=0.1;
+    const vs=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang)), v=vs.find(v=>/daniel|fred|alex|male|google uk english male|arthur|aaron|ralph/i.test(v.name))||vs[0]; if(v) u.voice=v;
+    u.onend=stop; u.onerror=stop; speechSynthesis.speak(u); setTimeout(stop,600+text.length*90); }catch(e){ stop(); }
 }
 function zen(text,mood,pen){
   const el=$('zen'); if(!el||!text) return;
-  el.hidden=false; el.dataset.mood=mood||'calm'; $('zenTxt').textContent=text;
+  el.hidden=false; el.dataset.mood=mood||'calm'; const z=$('zenTxt'); z.textContent=text; z.classList.remove('in'); void z.offsetWidth; z.classList.add('in');
   $('zenPen').hidden=!pen; $('zenPen').textContent=pen||'';
   if(text!==ZEN.last) zenSpeak(text); ZEN.last=text;
 }
 function zenVoiceBtn(){ const b=$('zenVoice'); b.textContent=ZEN.voice?'🔊 Voice on':'🔈 Voice off'; b.setAttribute('aria-pressed',ZEN.voice); }
-$('zenVoice').addEventListener('click',()=>{ ZEN.voice=!ZEN.voice; try{ localStorage.setItem('esZenVoice',ZEN.voice?'1':'0'); }catch(e){} zenVoiceBtn(); if(ZEN.voice) zenSpeak($('zenTxt').textContent); else try{ speechSynthesis.cancel(); }catch(e){} });
+$('zenVoice').addEventListener('click',()=>{ ZEN.voice=!ZEN.voice; try{ localStorage.setItem('es.zen.voice',JSON.stringify(ZEN.voice)); }catch(e){} zenVoiceBtn(); if(ZEN.voice) zenSpeak($('zenTxt').textContent); else try{ speechSynthesis.cancel(); }catch(e){} });
 $('zenX').addEventListener('click',()=>{ $('zen').hidden=true; try{ speechSynthesis.cancel(); }catch(e){} });
 zenVoiceBtn();
 const ZL={
-  plug48:'You connected a microphone into live phantom power. The capsule forgives nothing. Power off, then connect.',
-  unplug48:'You pulled the cable with forty-eight volts still flowing. That crack is the sound of carelessness. Power off, then disconnect.',
-  p48spk:'You took the phantom power away with the speakers open. The cones felt it. Speakers down first. Always.',
-  loop:'Feedback. The signal is eating its own tail. Pull the last cable. Now.',
-  p48late:'Gain before power. Backwards. The preamp shouted at you. Power first, then gain.',
-  clip:'Red. You were not listening. Lower the gain.',
+  plug48:'No. Forty-eight volts, then the cable? The capsule forgives nothing. Power off. Then connect.',
+  unplug48:'You pulled it live. That crack was carelessness. Power off. Then disconnect.',
+  p48spk:'The speakers were open. The cones felt it. Speakers down first. Always.',
+  loop:'Feedback. The signal eats its own tail. Pull the last cable.',
+  p48late:'Gain, then power. Backwards. The preamp shouted.',
+  clip:'Red. You were not listening.',
 };
 // XP lost for the faults that would damage gear or ears in a real studio (sent to the course, which takes the XP)
 const PEN={feedback:15,phantom:20};
@@ -1981,19 +1998,19 @@ const TASKS={
 // ---- Maestro Zen's challenge: no checklist, no hint, and any fault loses the stage ----
 const nearU=f=>Math.abs(f-75)<=5;
 Object.assign(TASKS,{
-  zen1:{t:'Stage 1 · The silent take',strict:true,steps:['plug','gain','recBus','dawIn','dawRet','zen1Break'],
-    z:'Someone has been at this desk before you. Five things are wrong. Find them in silence.',
+  zen1:{t:'Gate 1 · The silent take',strict:true,steps:['plug','gain','recBus','dawIn','dawRet','zen1Break'],
+    z:'Someone sat here before you. Five things are wrong. Find them. In silence.',
     p:'The vocal is plugged in and gain staged on channel 1. It must reach the DAW through the REC bus with the channel fader at 0 dB, and you must hear it off-tape: DAW track 1 back on channel 5, on the MIX bus, on the speakers. Several things are wrong. Find and fix them. No checklist, no hint.',
     ok:R=>has(R.F.reco.sigs,'Vocal')&&S.ch[0].rec&&nearU(S.ch[0].fader)&&S.c.recMaster>0&&S.daw.tr[0].out===5&&LN(S.ch[4])&&S.ch[4].mix&&S.c.mon==='mix'&&has(R.D.mon,'Vocal')&&!R.D.anySolo&&spk()},
-  zen2:{t:'Stage 2 · The singer\'s ears',strict:true,steps:['plug','hpDown','gain','recBus','dawIn','dawRet'],
-    z:'The singer cannot see you. They know you only through their headphones. Be worthy of their ears.',
+  zen2:{t:'Gate 2 · The singer\'s ears',strict:true,steps:['plug','hpDown','gain','recBus','dawIn','dawRet'],
+    z:'The singer cannot see you. Only hear you. Be worthy of their ears.',
     p:'Headphones A must carry three things: the vocal from the return channel 5, pre-fader; the DAW click (output 8, on channel 8) in the cue only; and your voice through talkback. Check the foldback with AFL before it reaches the singer. The click must never touch the MIX bus.',
-    watch:R=>has(R.F.mixo.sigs,'Click')?'The click is in the mix. Your mix is now a metronome. The stage is lost.':'',
+    watch:R=>has(R.F.mixo.sigs,'Click')?'The click is in the mix. Your mix is now a metronome. The gate closes.':'',
     ok:R=>S.ch[4].cueOn&&!S.ch[4].cuePost&&!S.ch[0].cueOn&&has(R.D.pha,'Vocal')&&has(R.D.pha,'Click')&&S.daw.click.on&&S.daw.play&&!!TK.tr.tbHeard&&!!TK.tr.fbAfl},
-  zen3:{t:'Stage 3 · One take, no mistakes',strict:true,steps:[],
-    z:'Everything is at zero, as it was before the first engineer. One take. Then leave the studio as you found it.',
+  zen3:{t:'Gate 3 · One take',strict:true,steps:[],
+    z:'Everything is zero. One take. Then leave the room as you found it.',
     p:'The desk and the studio are zeroed; the condenser is on its stand by wall box 1. Plug it in, gain stage it, send it to DAW track 1 and return it on channel 5 on the MIX bus. Give the singer the vocal and the click (channel 8) in headphones A. Record one pass while you monitor off-tape and the singer hears vocal and click. Then shut down: speakers down, 48V off, unplug the mic, headphone amp off.',
-    watch:R=>has(R.F.mixo.sigs,'Click')?'The click is in the mix. One take, and you spent it on a metronome. The stage is lost.':'',
+    watch:R=>has(R.F.mixo.sigs,'Click')?'One take. You spent it on a metronome. The gate closes.':'',
     ok:R=>S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,'Vocal (DAW)'))&&!!TK.tr.offTape&&!!TK.tr.cueRec&&!S.room[0].plug&&!S.ch[0].phantom&&!S.hp.on},
 });
 STEP.zen1Break=()=>{ S.ch[0].rec=false; S.c.recMaster=0; S.daw.tr[0].out=6; S.ch[4].flip=true; S.c.mon='rec'; };
@@ -2039,14 +2056,14 @@ function drawTask(R){
   if(bad&&bad!==TK.saidBad){ TK.saidBad=bad; if(!failed) zen(bad,'stern'); } else if(!bad) TK.saidBad='';
   if(failed&&!TK.saidFail){ TK.saidFail=true; tell({type:'zen-fail',task:TASK}); }
   if($('taskchk')) $('taskchk').innerHTML=list.map(([l,v])=>`<li class="${v?'y':''}"><span aria-hidden="true">${v?'✓':'○'}</span> ${l}</li>`).join('');
-  $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':failed?'Stage lost':bad?'Fix this first':'In progress';
+  $('taskst').className='taskst '+(ok?'ok':bad?'bad':''); $('taskst').textContent=ok?'✓ Done':failed?'Gate closed':bad?'Fix this first':'In progress';
   $('taskbad').innerHTML=''; $('taskbad').textContent=failed?'Maestro Zen: '+bad+' ':bad; $('taskbad').hidden=!bad;
-  if(failed){ const b=document.createElement('button'); b.className='b'; b.type='button'; b.textContent='Begin the stage again'; b.onclick=()=>location.reload(); $('taskbad').append(b); } $('taskok').hidden=!ok;
+  if(failed){ const b=document.createElement('button'); b.className='b'; b.type='button'; b.textContent='Begin the gate again'; b.onclick=()=>location.reload(); $('taskbad').append(b); } $('taskok').hidden=!ok;
   if(!EMBED) $('taskok').textContent='✓ Task done. Go back to your lesson for the next task, or keep exploring.';
   if(ok&&!TK.shownOk){ TK.shownOk=true; document.querySelector('.taskbar').scrollIntoView({behavior:'smooth',block:'start'}); }
   document.querySelector('.taskbar').classList.toggle('done',ok);
   if(ok&&!TK.done){ TK.done=true; tell({type:'task',task:TASK,done:true});
-    zen(TASK==='zen3'?'One take. No mistakes. The desk is quiet again, and so are you. You are a Zen Recording Master.':T.strict?'Good. You did not hurry, and you did not err. The next stage waits.':'Good. Now close the desk, and walk on.','pleased'); }
+    zen(TASK==='zen3'?'There is nothing left for me to teach you. Go. Record someone else.':T.strict?'Good. Do not smile yet.':'Good. Close the desk. Walk on.','pleased'); }
 }
 if(TASK&&TASKS[TASK]){
   const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); TK.done=false;
@@ -2055,7 +2072,7 @@ if(TASK&&TASKS[TASK]){
   document.querySelector('.tabs').before(bar);
   bar.addEventListener('click',e=>{ if(e.target.id==='taskclose') tell({type:'close'}); });
   const _render=render; render=function(){ _render(); drawTask(LAST); };
-  zen(T.z||'Read the task. Do only what it asks, and do it exactly.','calm');
+  zen(T.z||'Read. Then do exactly that. Nothing more.','calm');
 }
 // From a lesson (a task or the exam): the trainer's own free-practice exercises would only confuse, so hide them.
 if(TASK||QS.get('exam')){ $('excard').hidden=true; $('excard').parentElement.classList.add('one'); }
@@ -2063,7 +2080,7 @@ if(QS.get('exam')){ $('exStart').click(); setTimeout(()=>showView('exam'),0); }
 $('exStop').addEventListener('click',()=>{ let auto=0,autoMax=0,tot=0; EXB.forEach(([q,n,fn],k)=>{ const isT=fn(LAST)===T; if(!isT){ autoMax++; auto+=EXAM.best[k]||0; } tot+=(isT?EXAM.tutor[k]:EXAM.best[k])||0; });
   tell({type:'exam',auto,autoMax,total:tot,max:EXB.length});
   const r=autoMax?auto/autoMax:0;
-  zen(auto===autoMax?'Every block, clean. Now do it again, and it will become practice.':r>=0.7?`${auto} of ${autoMax}. Seventy is a door, not a home. You may pass. Come back for the rest.`:`${auto} of ${autoMax}. Not yet. The desk is patient. Are you?`,auto===autoMax?'pleased':r>=0.7?'calm':'stern'); });
+  zen(auto===autoMax?'Every block, clean. Do not smile yet.':r>=0.7?`${auto} of ${autoMax}. The door opens. It is not a home.`:`${auto} of ${autoMax}. Empty your cup. Then come back.`,auto===autoMax?'pleased':r>=0.7?'calm':'stern'); });
 
 render();
 showView(location.hash.slice(1)||'console');

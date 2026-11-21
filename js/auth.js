@@ -2,8 +2,8 @@
 // The URL and publishable key are meant to be public: the database's security rules (supabase/schema.sql)
 // decide what each signed-in person can read or change.
 
-import { h } from './util.js?v=202611210034';
-import { celebrate, summarise, xpChip } from './game.js?v=202611210034';
+import { h } from './util.js?v=202611210048';
+import { celebrate, summarise, xpChip } from './game.js?v=202611210048';
 
 const SUPABASE_URL = 'https://joiozvkdjhgmgrlsbooy.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_XA9xQHE9c_juWcnk2V7y5g_hTS0pIIb';
@@ -214,6 +214,26 @@ async function doAward(kind, ref) {
       celebrate({ gained, before: summarise(before), after: after ? summarise(after) : null });
       const chip = document.querySelector('.xp-chip');
       if (chip && after) chip.replaceWith(xpChip(summarise(after)));
+    }
+    return gained;
+  } catch {
+    return 0;
+  }
+}
+
+/** Maestro Zen is beaten: 100 XP once per course (supabase/zen.sql in the theory repo), then celebrate. */
+export async function awardZen() {
+  try {
+    const p = await myProfile();
+    if (!p || p.role === 'teacher') return 0;
+    const before = await myXpEvents();
+    if (!before) return 0;
+    const { data, error } = await sb().rpc('award_zen', { p_course: COURSE_ID });
+    if (error) return 0;
+    const gained = data?.[0]?.gained || 0;
+    if (gained) {
+      const after = await myXpEvents(true);
+      celebrate({ gained, before: summarise(before), after: after ? summarise(after) : null });
     }
     return gained;
   } catch {

@@ -7,9 +7,8 @@
 alter table public.xp_events drop constraint if exists xp_events_xp_range;
 alter table public.xp_events add constraint xp_events_xp_range check (xp between -100 and 100);
 alter table public.xp_events drop constraint if exists xp_events_kind_ok;
-alter table public.xp_events add constraint xp_events_kind_ok check (kind in (
-  'passed', 'submitted', 'lesson', 'quiz-pass', 'quiz-round', 'quiz-perfect', 'daily', 'marked',
-  'desk-task', 'exam-pass', 'exam-perfect', 'fault-feedback', 'fault-phantom'));
+-- Same rule as zen.sql: any well-formed kind (only the database's own functions can write XP).
+alter table public.xp_events add constraint xp_events_kind_ok check (kind ~ '^[a-z][a-z0-9-]{1,30}$');
 
 create or replace function public.award_xp(p_course text, p_kind text, p_ref text)
 returns table (gained int, total int)

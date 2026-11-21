@@ -135,12 +135,12 @@ export const LESSONS = [
         { q: 'You patch into a fully normalled point on the patchbay. What happens to the original signal?', a: ['It carries on as well as the new patch', 'It is broken: the signal now goes only where you patched it', 'It is doubled'], ok: 1 },
         { q: 'End of the session with a condenser on channel 1. The safe order is…', a: ['Unplug the mic, then switch 48V off, then the speakers', 'Speakers down or cut, 48V off and wait, then unplug the mic', '48V off, unplug, then the speakers'], ok: 1 },
       ] }] },
-  { id: 'rec-25-zen', title: 'The challenge of Maestro Zen', videos: [], requires: 'rec-24-final',
-    about: 'Three stages on the desk, no hints, no checklist. Maestro Zen is calm, and he forgives nothing: one fault (phantom power, feedback, a clipping preamp, the click in the mix) and the stage is lost. Pass all three and you are a Zen Recording Master.',
+  { id: 'rec-25-zen', title: 'The challenge of Maestro Zen', videos: [], requires: 'rec-24-final', zen: true,
+    about: 'Three gates on the desk, no hints, no checklist. Maestro Zen is calm, and he forgives nothing: one fault (phantom power, feedback, a clipping preamp, the click in the mix) and the gate closes. Pass all three for 100 XP: you are a Zen Recording Master.',
     exercises: [
-      { id: 'zen1', kind: 'desk', task: 'zen1', title: 'Stage 1 · The silent take' },
-      { id: 'zen2', kind: 'desk', task: 'zen2', title: 'Stage 2 · The singer\'s ears', after: 'zen1' },
-      { id: 'zen3', kind: 'desk', task: 'zen3', title: 'Stage 3 · One take, no mistakes', after: 'zen2' }] },
+      { id: 'zen1', kind: 'desk', task: 'zen1', title: 'Gate 1 · The silent take' },
+      { id: 'zen2', kind: 'desk', task: 'zen2', title: 'Gate 2 · The singer\'s ears', after: 'zen1' },
+      { id: 'zen3', kind: 'desk', task: 'zen3', title: 'Gate 3 · One take', after: 'zen2' }] },
 ];
 
 export const findLesson = (id) => LESSONS.find((l) => l.id === id) || null;

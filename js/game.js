@@ -1,8 +1,8 @@
 // Gamification: levels, streaks and badges, worked out from the student's XP events.
 // XP itself is decided by the database (supabase/game.sql); this file only reads and shows it.
 
-import { COURSE } from './course.js?v=202611210034';
-import { h } from './util.js?v=202611210034';
+import { COURSE } from './course.js?v=202611210048';
+import { h } from './util.js?v=202611210048';
 
 export const LEVELS = COURSE.levels;
 
@@ -84,7 +84,7 @@ export function badges() {
     { id: 'exam-pass', icon: '🎓', name: 'Signal flow: passed', how: 'Score 70% or more of the simulator blocks in the exam.', test: (s) => s.count['exam-pass'] >= 1 },
     { id: 'exam-perfect', icon: '🏆', name: 'Clean desk', how: 'Get every simulator block of the exam right.', test: (s) => s.count['exam-perfect'] >= 1 },
     { id: 'final-test', icon: '🗻', name: 'The final test', how: 'Pass the final 10-question test.', test: (s) => s.refs.has('passed:rec-24-final/final') },
-    { id: 'zen-master', icon: '☯️', name: 'Zen Recording Master', how: 'Pass all three stages of Maestro Zen\'s challenge.', test: desk('zen3') },
+    { id: 'zen-master', icon: '☯️', name: 'Zen Recording Master', how: 'Pass all three stages of Maestro Zen\'s challenge.', test: (s) => s.count['zen-master'] >= 1 || s.desk.has('zen3') },
     { id: 'feedback', icon: '💌', name: 'Feedback loop', how: 'Get feedback from your teacher.', test: (s) => s.count.marked >= 1 },
     { id: 'streak-3', icon: '🔥', name: 'Warming up', how: 'Practise 3 days in a row.', test: (s) => s.best >= 3 },
     { id: 'streak-7', icon: '🔥', name: 'On fire', how: 'Practise 7 days in a row.', test: (s) => s.best >= 7 },
@@ -137,6 +137,7 @@ const KIND_TEXT = {
   'quiz-perfect': 'Perfect round',
   daily: 'Daily practice',
   marked: 'Teacher feedback',
+  'zen-master': 'Beat Maestro Zen',
   'fault-feedback': 'Maestro Zen: feedback loop',
   'fault-phantom': 'Maestro Zen: phantom power fault',
 };
