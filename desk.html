@@ -293,7 +293,9 @@ svg text{font-family:var(--font);fill:var(--ink)}
 .stage1 .knob-t{flex:0 0 auto;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;font-weight:700;cursor:pointer;background:var(--panel-2);color:var(--ink)}
 .stage1 .knob-t.loose{background:var(--led-amber);color:#fff;border-color:transparent}
 .stage1 .st-note{font-size:12px;color:var(--muted)}
-.stage1 svg{width:100%;height:auto;display:block}
+.stage1 svg{width:100%;max-width:220px;max-height:260px;height:auto;display:block;margin:0 auto}
+.stage1 .coil-svg{max-width:200px;max-height:120px}
+.stage1 .st-do{font-size:12.5px;font-weight:600}
 .st-stand{stroke:#5d6470;stroke-width:5;stroke-linecap:round;fill:none}
 .st-knob{fill:#2b2f36}.st-knob.loose{fill:var(--led-amber)}
 .st-mount{fill:none;stroke:#8a8f98;stroke-width:3}.st-mic{fill:#c9ccd2;stroke:#5d6470;stroke-width:1.5}
@@ -1741,7 +1743,9 @@ function drawRoom(R){
 $('hpamp').innerHTML=`<div class="pnl-t">HEADPHONE AMP</div>${pb('hp.on','AMP ON','green','hpOn')}
   <div class="kb">${RK({path:'hp.a',label:'HP A',min:0,max:10,sm:true,tip:'hpLvl',fmt:'lvdb',aria:'Headphones A level'})}${pb('hp.plugA','HP A PLUGGED','amber','hpPlug')}</div>
   <div class="kb">${RK({path:'hp.b',label:'HP B',min:0,max:10,sm:true,tip:'hpLvl',fmt:'lvdb',aria:'Headphones B level'})}${pb('hp.plugB','HP B PLUGGED','amber','hpPlug')}</div>`;
-$('view-room').addEventListener('click',e=>{ const b=e.target.closest('[data-plug]'); if(!b) return; const r=S.room[b.dataset.plug]; if(!r.src) return; r.plug=!r.plug; render(); });
+$('view-room').addEventListener('click',e=>{ const b=e.target.closest('[data-plug]'); if(!b) return; const r=S.room[b.dataset.plug]; if(!r.src) return; r.plug=!r.plug;
+  if(r.plug&&+b.dataset.plug===0) S.mic1.coil={size:null,loops:[],done:false}; // plugged in = laid out, no longer coiled
+  render(); });
 $('stations').addEventListener('input',e=>{ const d=e.target.dataset; if(d.room===undefined) return; const r=S.room[d.room];
   if(d.k==='src'){ r.src=e.target.value||null; if(r.src){ r.mic=INSTR[r.src].mics[0]; r.plug=true; } } else r.mic=e.target.value;
   render(); });
@@ -1792,13 +1796,13 @@ function drawStage(){
     :`<b>in the shockmount</b><button class="knob-t ${m.ring?'':'loose'}" type="button" data-st="ring">${m.ring?'ring locked':'ring unlocked'}</button>${b('unmount','Take it off, into its box')}`}</div>`;
   const plugged=S.room[0].plug;
   let C=`<div class="st-row"><b>Cable · wall box 1</b></div>`;
-  if(plugged) C+='<p class="st-note">In use: plugged into wall box 1.</p>';
-  else if(m.mic!=='box') C+='<p class="st-note">Unplugged from the wall box, still on the mic. Put the mic away first, then coil the cable.</p>';
-  else if(!c.size) C+=`<div class="st-row"><span>Coil size:</span>${Object.entries(COILS).map(([k,v])=>b('size:'+k,v)).join('')}</div>`;
+  if(plugged) C+='<p class="st-do">In use: plugged into wall box 1. To coil it, unplug it first (48V off).</p>';
+  else if(m.mic!=='box') C+='<p class="st-do">Unplugged from the wall box, but still on the mic. Put the mic in its box first, then coil the cable.</p>';
+  else if(!c.size) C+=`<p class="st-do">Coil the cable. First, how big is the coil?</p><div class="st-row">${Object.entries(COILS).map(([k,v])=>b('size:'+k,v)).join('')}</div>`;
   else if(!c.done) C+=`<div class="st-row"><span>Loop ${c.loops.length+1} of 8:</span>${b('loop:over','Over (O)')}${b('loop:under','Under (U)')}</div><p class="st-note">Over and under, alternating, so the twists cancel out.</p>`;
   else { const sc=coilScore(c); C+=`<p class="st-note">Coiled, ${COILS[c.size].toLowerCase()} · ${sc===1?'no twists':sc===0.5?'nearly':'twisted'}.</p>`; }
   if(!plugged&&m.mic==='box'&&(c.size||c.loops.length)) C+=`<div class="st-row">${b('uncoil','Uncoil and start again')}</div>`;
-  $('stage1').innerHTML=`<div class="st-col">${standSVG(m)}</div><div class="st-col"><h4>Stand and microphone · station 1</h4>${L}${M}</div><div class="st-col"><h4>Cable</h4>${coilSVG(c)}${C}</div>`;
+  $('stage1').innerHTML=`<div class="st-col">${standSVG(m)}</div><div class="st-col"><h4>Stand and microphone · station 1</h4>${L}${M}</div><div class="st-col"><h4>Cable</h4>${C}${coilSVG(c)}</div>`;
 }
 function stageAct(act,val){
   const m=S.mic1, [k,v]=act.split(':'), ev=EXAM.ev;
