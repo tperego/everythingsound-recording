@@ -778,7 +778,7 @@ const TIPS={
   dynOP:'DYNAMICS OP: the dynamics sit at the channel output. Order: OP = EQ > INS > DYN; OP + PRE = INS > DYN > EQ.',
   dynU:'Assigns centre‑section Dynamics unit 1 or 2 to this channel. The AWS has no compressor on each channel: there are two shared units in the centre, and each can be on one channel at a time. Pressing it here takes the unit off any other channel.',
   dynUnit:'Centre Dynamics unit (compressor). RATIO 1–20, THRESHOLD +10 to −20, RELEASE 0.1–4 s, FST ATK for a fast attack. The header shows which channel it is assigned to; the LEDs show gain reduction in dB.',
-  dynFast:'FST ATK: fast attack (1 ms instead of 10 ms).', dynPk:'PK: peak detection. Shown for completeness; the simulator\'s detector does not change.',
+  dynFast:'FST ATK: fast attack (1 ms instead of 10 ms).', dynPk:'PK: the compressor normally has a soft, over‑easy knee. PK switches it to peak sensing and replaces the over‑easy characteristic with a hard knee.',
   dynGate:'Gate / expander (the black section). RANGE sets how far the gate closes, up to 40 dB; fully left the section is off. THRESHOLD is the level that opens it, in channel‑meter dB. HOLD keeps it open after the signal falls below the threshold; RELEASE is how fast it then closes. On a kick: threshold above the spill from the other drums, below the kick hits; hold and release short.',
   dynExp:'EXP: the section works as a downward expander (signals below the threshold are turned down gradually, 2:1) instead of a gate.',
   dynIn:'IN: switches the unit in. Off, the assigned channel passes through unprocessed.',
@@ -2026,7 +2026,7 @@ function rewire(R){
       else if(p==='eq'){ E(prev,x.eq.in); prev=x.eq.out; }
       else if(dynOn(c)){ E(prev,x.dyn.in); prev=x.dyn.out; if(x.gate){ E(prev,x.gate); prev=x.gate; } } });
     E(prev,x.pre); applyEQ(x.eq,c,t);
-    if(dynOn(c)){ const u=C.dyn[c.dyn-1], th=u.thr-18; x.dyn.set(true,th,u.ratio,u.fast?0.001:0.01,u.rel,1);
+    if(dynOn(c)){ const u=C.dyn[c.dyn-1], th=u.thr-18; x.dyn.set(true,th,u.ratio,u.fast?0.001:0.01,u.rel,1); x.dyn.c.knee.setValueAtTime(u.pk?0:12,t);
       if(x.gate){ const P=x.gate.parameters; P.get('thr').setValueAtTime(u.gThr-16,t); P.get('range').setValueAtTime(u.gRange,t); P.get('hold').setValueAtTime(u.gHold,t); P.get('rel').setValueAtTime(u.gRel,t); P.get('exp').setValueAtTime(u.exp?1:0,t); } }
     else x.dyn.set(false,0,1,0.01,0.25,1);
     E(x.pre,x.fader); set(x.fader.gain,fdrGain(c.fader,c.cut)); set(x.pan.pan,c.pan/5);

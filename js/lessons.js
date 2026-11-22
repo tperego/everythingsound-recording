@@ -241,7 +241,7 @@ export const LESSONS = [
         { q: 'You gate the kick to get rid of the hi-hat. Where do you set the threshold?', a: ['All the way down, so everything passes', 'Where the kick hits open the gate and the hi-hat stays below it', 'All the way up, so nothing passes'], ok: 1, at: 84 },
         { q: 'What does the gate\'s hold control set?', a: ['How long the gate stays open after the signal falls below the threshold', 'How loud the kick is', 'The ratio'], ok: 0, at: 142 },
         { q: 'Nothing pressed: which comes first on the channel?', a: ['The dynamics, then the EQ', 'The EQ, then the dynamics. IP puts the dynamics (and inserts) before the EQ, OP after it', 'They run side by side'], ok: 1, at: 302 },
-        { q: 'The compressor\'s knee is soft (over easy) by default. Which button gives a hard knee?', a: ['PK', 'IP', 'EFX'], ok: 0, at: 425 },
+        { q: 'The compressor is normally over-easy (a soft knee). What does the PK button do?', a: ['Switches the gate on', 'Switches to peak sensing and replaces the over-easy characteristic with a hard knee', 'Adds make-up gain'], ok: 1, at: 425 },
         { q: 'The ratio knob fully clockwise makes the unit…', a: ['Inactive', 'A true limiter', 'A gate'], ok: 1, at: 445 },
         { q: 'The attack is normally program dependent (3 to 30 ms). For very fast notes you…', a: ['Press fast attack', 'Raise the release', 'Lower the ratio'], ok: 0, at: 550 },
         { q: 'How do you use the compressor on the mix bus?', a: ['Patch it on the patchbay', 'Press its IN button and select the bus it works on', 'It is always on'], ok: 1, at: 570 },
