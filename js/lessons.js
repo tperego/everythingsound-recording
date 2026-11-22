@@ -125,7 +125,7 @@ export const LESSONS = [
         { q: 'Compared with a cardioid, a hypercardioid…', a: ['Is more directional: even less pickup at the sides and back', 'Picks up more from the sides', 'Is the same as an omni'], ok: 0, at: 182 },
       ] }] },
   { id: 'rec-13-stereo', title: 'Stereo techniques',
-    about: 'Coincident pairs (XY, MS, Blumlein), spaced pairs (AB), near-coincident pairs and the baffled omni pair: how each places the instruments between the speakers.',
+    about: 'Coincident pairs (XY, MS, Blumlein), spaced pairs (AB), near-coincident pairs and the baffled omni pair. Then build them in the stereo pair simulator: the stereo recording angle (SRA) of each pair, after Michael Williams, and where each player lands between the speakers.',
     videos: [V('hGUwGETPpsM', 'Stereo techniques')],
     exercises: [
       { id: 'q', kind: 'quiz', title: 'Stereo pairs', questions: [
@@ -135,7 +135,13 @@ export const LESSONS = [
         { q: 'A baffled omni pair needs…', a: ['Two cardioids', 'Two omnis with a baffle between them', 'Two figure of eights'], ok: 1, at: 195 },
         { q: 'A Blumlein pair is…', a: ['Two cardioids at 90°', 'Two figure-of-eight mics, coincident, at 90°', 'Two spaced omnis'], ok: 1, at: 232 },
         { q: 'Why is Blumlein good for a choir standing around the mics?', a: ['It picks up the front and the back', 'It rejects the room completely'], ok: 0, at: 298 },
-      ] }] },
+      ] },
+      { id: 'xy', kind: 'desk', sim: 'stereo', task: 'xy', title: 'Build an XY pair', at: 64 },
+      { id: 'ortf', kind: 'desk', sim: 'stereo', task: 'ortf', title: 'Build an ORTF pair' },
+      { id: 'blumlein', kind: 'desk', sim: 'stereo', task: 'blumlein', title: 'Build a Blumlein pair for the choir', at: 232 },
+      { id: 'ab', kind: 'desk', sim: 'stereo', task: 'ab', title: 'Space two omnis for the choir', at: 174 },
+      { id: 'quartet', kind: 'desk', sim: 'stereo', task: 'quartet', title: 'Fit the quartet between the speakers' },
+      { id: 'zoom', kind: 'desk', sim: 'stereo', task: 'zoom', title: 'The stereophonic zoom' }] },
   { id: 'rec-14-drums', title: 'Drum mic set-ups',
     about: 'Set-up 1: one mic in the room to hear the kit\'s balance. Set-up 2: one mic at the top of an equilateral triangle. Set-up 3: the Glyn Johns three-mic set-up. And the order to build it all in.',
     videos: [V('8fcWrF76Lzc', 'Drum set-ups 1 and 2'), V('bA9uLt6YeAM', 'Drum set-up 3')],

@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stereo Pair Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* Stereo pair simulator: two mics, their pattern, spacing and angle -> the stereo recording angle (SRA, after Michael Williams)
+   and where each instrument of the ensemble lands between the speakers. */
+:root{
+  --bg:#e9ebee; --panel:#d7dbe1; --card:#f6f7f9; --ink:#1d232c; --muted:#5a6472; --line:#a9b1bc;
+  --sig:#d98a1c; --sig-soft:rgba(217,138,28,.16); --ok:#2f8a4c; --ok-soft:rgba(47,138,76,.12); --bad:#c2453b; --bad-soft:rgba(194,69,59,.12);
+  --mic:#2f6fc0; --anti:#c2453b; --stage:#cfd5dc;
+  --font:"IBM Plex Sans Condensed",system-ui,"Arial Narrow",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#14181e; --panel:#1f252e; --card:#1a1f27; --ink:#e6e9ee; --muted:#97a1ae; --line:#3c4552;
+  --sig:#f2a640; --sig-soft:rgba(242,166,64,.16); --ok:#5cc47c; --ok-soft:rgba(92,196,124,.13); --bad:#e0685d; --bad-soft:rgba(224,104,93,.14);
+  --mic:#6ea2e8; --anti:#e0685d; --stage:#2a313b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14181e; --panel:#1f252e; --card:#1a1f27; --ink:#e6e9ee; --muted:#97a1ae; --line:#3c4552;
+  --sig:#f2a640; --sig-soft:rgba(242,166,64,.16); --ok:#5cc47c; --ok-soft:rgba(92,196,124,.13); --bad:#e0685d; --bad-soft:rgba(224,104,93,.14);
+  --mic:#6ea2e8; --anti:#e0685d; --stage:#2a313b; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-size:24px;margin:0;text-wrap:balance}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:0 0 6px;color:var(--muted);font-weight:600}
+p{margin:0}
+.lede{color:var(--muted);max-width:75ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+svg{display:block;width:100%;height:auto}
+.ctl{display:flex;flex-direction:column;gap:12px}
+.ctl label{display:flex;flex-direction:column;gap:4px;font-weight:600}
+.ctl .val{font-family:var(--mono);font-weight:400;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--sig)}
+select{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button{font:inherit;font-weight:600;padding:6px 11px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--sig)}
+button.on{background:var(--sig);border-color:var(--sig);color:#fff}
+button.primary{background:var(--sig);border-color:var(--sig);color:#fff}
+.readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.readout div{background:var(--bg);border-radius:8px;padding:8px 10px}
+.readout b{display:block;font-family:var(--mono);font-size:22px;font-weight:600}
+.readout span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.verdict{padding:10px 12px;border-radius:8px;font-weight:600}
+.verdict.ok{background:var(--ok-soft);color:var(--ok)}
+.verdict.wide{background:var(--bad-soft);color:var(--bad)}
+.verdict.narrow{background:var(--sig-soft);color:var(--sig)}
+.task{border-left:4px solid var(--sig)}
+.task.done{border-left-color:var(--ok)}
+.task ul{margin:8px 0 0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:3px}
+.task li::before{content:"○ ";color:var(--muted)}
+.task li.ok::before{content:"✓ ";color:var(--ok);font-weight:700}
+.donebar{margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:var(--ok);font-weight:700}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+a{color:var(--mic)}
+.lbl{font-family:var(--font);font-size:12px;fill:var(--ink)}
+.lbl-m{font-family:var(--mono);font-size:11px;fill:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Stereo pair simulator</h1>
+    <p class="lede">Choose the pattern, the spacing and the angle between the two mics. The shaded wedge is the <b>stereo recording angle (SRA)</b>: the part of the room that ends up between the speakers. Anything outside it gets stuck in a speaker.</p>
+  </header>
+
+  <section id="task" class="card task" hidden></section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>From above: the ensemble and the pair</h2>
+      <svg id="plan" viewBox="0 0 600 400" role="img" aria-label="Plan view of the ensemble, the pair and its recording angle"></svg>
+    </section>
+    <section class="card ctl">
+      <div>
+        <h2>Classic pairs</h2>
+        <div class="row" id="presets"></div>
+      </div>
+      <label>Polar pattern
+        <select id="pat"></select>
+      </label>
+      <label>Spacing between the capsules <span class="val" id="dv"></span>
+        <input type="range" id="d" min="0" max="100" step="1">
+      </label>
+      <label>Angle between the mics <span class="val" id="av"></span>
+        <input type="range" id="a" min="0" max="180" step="1">
+      </label>
+      <label>The ensemble seen from the pair <span class="val" id="wv"></span>
+        <input type="range" id="w" min="40" max="180" step="2">
+      </label>
+      <label>Ensemble
+        <select id="ens"><option value="quartet">String quartet</option><option value="choir">Choir</option></select>
+      </label>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>In the control room: where you hear each one</h2>
+      <svg id="spk" viewBox="0 0 600 250" role="img" aria-label="Where each instrument appears between the speakers"></svg>
+    </section>
+    <section class="card ctl">
+      <div class="readout">
+        <div><span>SRA</span><b id="sra">–</b></div>
+        <div><span>Level diff.</span><b id="dl">–</b></div>
+        <div><span>Time diff.</span><b id="dt">–</b></div>
+      </div>
+      <p class="small muted">Level and time differences are for an instrument at the edge of the ensemble. About 15 dB, or about 1.1 ms, or a mix of the two, puts a sound fully in one speaker.</p>
+      <p id="verdict" class="verdict"></p>
+      <p id="phase" class="small" hidden></p>
+    </section>
+  </div>
+
+  <section class="card small muted">
+    <h2>About this simulator</h2>
+    <p>It follows Michael Williams' method: each pair turns direction into a level difference (from the pattern and the angle) and a time difference (from the spacing), and the two add up. It is a simplified model, so treat the numbers as a guide, then listen. Read Williams' paper <a href="https://www.fullcompass.com/common/files/22300-GraceDesignTheStereophonicZoombyMichaelWilliams.pdf" target="_blank" rel="noopener">The Stereophonic Zoom</a>, see his graphs at <a href="https://www.williamsmmad.com" target="_blank" rel="noopener">williamsmmad.com</a>, and hear real recordings of each pair in <a href="https://apps.apple.com/us/app/marrs/id1295926126" target="_blank" rel="noopener">MARRS</a>, the University of Huddersfield's free app (Hyunkook Lee).</p>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const EMBED = window.parent !== window;
+  const tell = (m) => { if (EMBED) parent.postMessage({ source: 'es-desk', ...m }, location.origin); };
+
+  // First-order patterns: g(phi) = a + (1 - a) cos(phi)
+  const PATS = { omni: ['Omni', 1], sub: ['Subcardioid', 0.7], card: ['Cardioid', 0.5], super: ['Supercardioid', 0.37], hyper: ['Hypercardioid', 0.25], fig8: ['Figure of eight', 0] };
+  const PRESETS = [
+    { n: 'XY', p: 'card', d: 0, a: 90 },
+    { n: 'ORTF', p: 'card', d: 17, a: 110 },
+    { n: 'NOS', p: 'card', d: 30, a: 90 },
+    { n: 'DIN', p: 'card', d: 20, a: 90 },
+    { n: 'Blumlein', p: 'fig8', d: 0, a: 90 },
+    { n: 'AB 40 cm', p: 'omni', d: 40, a: 0 },
+  ];
+  const ENS = {
+    quartet: ['Violin 1', 'Violin 2', 'Viola', 'Cello'],
+    choir: ['Soprano 1', 'Soprano 2', 'Alto', 'Tenor', 'Bass 1', 'Bass 2'],
+  };
+  const COLORS = ['#d9534f', '#e8a028', '#2a9d8f', '#4a7fd0', '#8a5cc2', '#6aa84f'];
+  const C = 343, FULL_DB = 15, FULL_MS = 1.12, RAD = Math.PI / 180;
+
+  const S = { p: 'card', d: 0, a: 90, w: 100, ens: 'quartet' };
+
+  const g = (phi) => { const a = PATS[S.p][1]; return a + (1 - a) * Math.cos(phi * RAD); };
+  // Source at azimuth th (degrees, + = right). Right mic aims at +a/2, left at -a/2.
+  function diffs(th) {
+    const gr = g(th - S.a / 2), gl = g(th + S.a / 2);
+    const db = 20 * Math.log10(Math.max(Math.abs(gr), 1e-4) / Math.max(Math.abs(gl), 1e-4));
+    const ms = (S.d / 100) * Math.sin(th * RAD) / C * 1000;
+    return { db, ms, anti: gr * gl < 0 };
+  }
+  const shift = (th) => { const { db, ms } = diffs(th); return Math.max(-1, Math.min(1, db / FULL_DB + ms / FULL_MS)); };
+  function sra() {
+    for (let th = 0.25; th <= 90; th += 0.25) if (shift(th) >= 1) return 2 * th;
+    return null; // more than 180°
+  }
+
+  // ---------- Controls ----------
+  $('#pat').replaceChildren(...Object.entries(PATS).map(([k, [n]]) => new Option(n, k)));
+  $('#presets').replaceChildren(...PRESETS.map((p) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = p.n;
+    b.onclick = () => { Object.assign(S, { p: p.p, d: p.d, a: p.a }); sync(); };
+    return b;
+  }));
+  const sync = () => { $('#pat').value = S.p; $('#d').value = S.d; $('#a').value = S.a; $('#w').value = S.w; $('#ens').value = S.ens; render(); };
+  $('#pat').oninput = (e) => { S.p = e.target.value; render(); };
+  $('#d').oninput = (e) => { S.d = +e.target.value; render(); };
+  $('#a').oninput = (e) => { S.a = +e.target.value; render(); };
+  $('#w').oninput = (e) => { S.w = +e.target.value; render(); };
+  $('#ens').oninput = (e) => { S.ens = e.target.value; render(); };
+
+  // ---------- Drawing ----------
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (tag, at = {}, text) => { const n = document.createElementNS(NS, tag); for (const k in at) n.setAttribute(k, at[k]); if (text != null) n.textContent = text; return n; };
+  const sources = () => { const names = ENS[S.ens], n = names.length; return names.map((name, i) => ({ name, th: n === 1 ? 0 : -S.w / 2 + (S.w * i) / (n - 1), c: COLORS[i % COLORS.length] })); };
+
+  function drawPlan(R) {
+    const svg = $('#plan'), cx = 300, cy = 360, rr = 250;
+    const pt = (th, r) => [cx + r * Math.sin(th * RAD), cy - r * Math.cos(th * RAD)];
+    const out = [];
+    // The SRA wedge
+    const half = R == null ? 90 : R / 2;
+    const [x1, y1] = pt(-half, 330), [x2, y2] = pt(half, 330);
+    out.push(el('path', { d: `M${cx},${cy} L${x1},${y1} A330,330 0 0 1 ${x2},${y2} Z`, fill: 'var(--sig-soft)', stroke: 'var(--sig)', 'stroke-dasharray': '5 4' }));
+    // Ensemble arc
+    const [e1x, e1y] = pt(-S.w / 2, rr), [e2x, e2y] = pt(S.w / 2, rr);
+    out.push(el('path', { d: `M${e1x},${e1y} A${rr},${rr} 0 0 1 ${e2x},${e2y}`, fill: 'none', stroke: 'var(--stage)', 'stroke-width': 26, 'stroke-linecap': 'round' }));
+    for (const s of sources()) {
+      const [x, y] = pt(s.th, rr); const inside = R == null || Math.abs(s.th) <= R / 2 + 0.01;
+      out.push(el('circle', { cx: x, cy: y, r: 9, fill: s.c, stroke: inside ? 'none' : 'var(--bad)', 'stroke-width': 3 }));
+      const [lx, ly] = pt(s.th, rr + 26);
+      out.push(el('text', { x: lx, y: ly, 'text-anchor': 'middle', class: 'lbl' }, s.name));
+    }
+    // The pair: capsules drawn 1.4 px per cm apart, with their patterns
+    const sep = Math.max(S.d * 1.4, 4);
+    for (const side of [-1, 1]) {
+      const mx = cx + side * sep / 2, aim = side * S.a / 2;
+      let pos = '', neg = '';
+      for (let k = 0; k <= 360; k += 4) {
+        const v = g(k) * 46, ang = (aim + k) * RAD, x = mx + Math.abs(v) * Math.sin(ang), y = cy - Math.abs(v) * Math.cos(ang);
+        if (v >= 0) pos += `${pos ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`; else neg += `${neg ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`;
+      }
+      out.push(el('path', { d: pos, fill: 'none', stroke: 'var(--mic)', 'stroke-width': 1.5, opacity: 0.8 }));
+      if (neg) out.push(el('path', { d: neg, fill: 'none', stroke: 'var(--anti)', 'stroke-width': 1.5, 'stroke-dasharray': '3 3', opacity: 0.8 }));
+      const [ax, ay] = [mx + 70 * Math.sin(aim * RAD), cy - 70 * Math.cos(aim * RAD)];
+      out.push(el('line', { x1: mx, y1: cy, x2: ax, y2: ay, stroke: 'var(--mic)', 'stroke-width': 2 }));
+      out.push(el('circle', { cx: mx, cy, r: 5, fill: 'var(--mic)' }));
+    }
+    out.push(el('text', { x: cx, y: 392, 'text-anchor': 'middle', class: 'lbl-m' }, `${PATS[S.p][0]} · ${S.d} cm · ${S.a}°`));
+    if (R != null) { const [tx, ty] = pt(half, 336); out.push(el('text', { x: tx + (half > 80 ? -6 : 6), y: ty - 4, class: 'lbl-m', 'text-anchor': half > 80 ? 'end' : 'start' }, `SRA ${Math.round(R)}°`)); }
+    svg.replaceChildren(...out);
+  }
+
+  function drawSpeakers() {
+    const svg = $('#spk'), L = 110, Rx = 490, y = 60, out = [];
+    const spk = (x, t) => [el('rect', { x: x - 16, y: y - 34, width: 32, height: 40, rx: 4, fill: 'var(--panel)', stroke: 'var(--line)' }), el('circle', { cx: x, cy: y - 10, r: 9, fill: 'none', stroke: 'var(--muted)' }), el('text', { x, y: y + 22, 'text-anchor': 'middle', class: 'lbl-m' }, t)];
+    out.push(el('line', { x1: L, y1: y, x2: Rx, y2: y, stroke: 'var(--line)', 'stroke-width': 2 }));
+    out.push(...spk(L, 'L'), ...spk(Rx, 'R'));
+    out.push(el('path', { d: 'M300,244 l-12,-14 h24 z', fill: 'var(--muted)' }));
+    out.push(el('text', { x: 300, y: 224, 'text-anchor': 'middle', class: 'lbl-m' }, 'you'));
+    const used = [];
+    for (const s of sources()) {
+      const sh = shift(s.th), x = 300 + sh * (Rx - L) / 2;
+      let lane = 0; while (used.some((u) => u.lane === lane && Math.abs(u.x - x) < 80)) lane++;
+      used.push({ x, lane });
+      const yy = y + 48 + lane * 24, stuck = Math.abs(sh) >= 0.999;
+      out.push(el('line', { x1: x, y1: y + 2, x2: x, y2: yy - 9, stroke: s.c, 'stroke-width': 1.5, opacity: 0.5 }));
+      out.push(el('circle', { cx: x, cy: yy, r: 8, fill: s.c, stroke: stuck ? 'var(--bad)' : 'none', 'stroke-width': 3 }));
+      out.push(el('text', { x: x + (x > 300 ? -13 : 13), y: yy + 4, 'text-anchor': x > 300 ? 'end' : 'start', class: 'lbl' }, s.name));
+    }
+    svg.replaceChildren(...out);
+  }
+
+  // ---------- Results ----------
+  function render() {
+    $('#dv').textContent = `${S.d} cm`; $('#av').textContent = `${S.a}°`; $('#wv').textContent = `${S.w}°`;
+    [...$('#presets').children].forEach((b, i) => { const p = PRESETS[i]; b.classList.toggle('on', p.p === S.p && p.d === S.d && p.a === S.a); });
+    const R = sra();
+    drawPlan(R); drawSpeakers();
+    const edge = diffs(S.w / 2);
+    $('#sra').textContent = R == null ? '>180°' : `${Math.round(R)}°`;
+    $('#dl').textContent = `${Math.abs(edge.db) > 40 ? '>40' : Math.abs(edge.db).toFixed(1)} dB`;
+    $('#dt').textContent = `${Math.abs(edge.ms).toFixed(2)} ms`;
+    const v = $('#verdict');
+    if (R != null && R < S.w - 8) { v.className = 'verdict wide'; v.textContent = `Too wide for this ensemble: the pair only covers ${Math.round(R)}°, so the outer players are stuck in the speakers. Narrow the angle, bring the mics closer or step back.`; }
+    else if (R == null || R > S.w + 8) { v.className = 'verdict narrow'; v.textContent = `Too narrow: the pair covers ${R == null ? 'more than 180°' : Math.round(R) + '°'}, so the ensemble only fills the middle of the speakers. Open the angle, space the mics wider or come closer.`; }
+    else { v.className = 'verdict ok'; v.textContent = 'The ensemble fills the speakers, edge to edge.'; }
+    const anti = sources().some((s) => diffs(s.th).anti) || (S.p === 'fig8' && S.a > 0);
+    $('#phase').hidden = !(S.p === 'fig8' || sources().some((s) => diffs(s.th).anti));
+    $('#phase').textContent = S.p === 'fig8'
+      ? 'Figure of eights also hear the back: the room behind the pair comes in too, and sounds at the sides arrive out of phase in the two mics (the dashed rear lobes).'
+      : 'Some players are behind one mic\'s null and arrive out of phase: move them inside the pattern.';
+    void anti;
+    checkTask(R);
+  }
+
+  // ---------- Tasks (from the lesson: stereo.html?task=ID) ----------
+  const TASKS = {
+    xy: { title: 'Build an XY pair', text: 'Two cardioids, capsules together, 90° apart. Then look at how much of the quartet fills the speakers.',
+      checks: [['Both mics on cardioid', () => S.p === 'card'], ['Capsules together (3 cm or less)', () => S.d <= 3], ['90° between them', () => Math.abs(S.a - 90) <= 3]],
+      end: 'XY covers about 180°: a 100° quartet only fills the middle. Coincident pairs give level differences only, so the image is narrow unless you get close.' },
+    ortf: { title: 'Build an ORTF pair', text: 'The French radio pair: two cardioids 17 cm apart, at 110°.',
+      checks: [['Both mics on cardioid', () => S.p === 'card'], ['17 cm apart (±2)', () => Math.abs(S.d - 17) <= 2], ['110° between them (±3)', () => Math.abs(S.a - 110) <= 3]],
+      end: 'ORTF mixes a level difference (the angle) and a time difference (the spacing). It covers a little over 100° (Williams\' charts give about 100°): close to the quartet, and a favourite for small ensembles.' },
+    blumlein: { title: 'Build a Blumlein pair', text: 'For a choir standing all around the mics: two figure of eights, coincident, at 90°. Choose the choir.',
+      checks: [['The choir', () => S.ens === 'choir'], ['Both mics on figure of eight', () => S.p === 'fig8'], ['Capsules together (3 cm or less)', () => S.d <= 3], ['90° between them', () => Math.abs(S.a - 90) <= 3]],
+      end: 'Blumlein covers only about 70° at the front, and the back as well: the room and anyone behind the pair are recorded too.' },
+    ab: { title: 'Space two omnis for the choir', text: 'The choir spans 120° from where the pair stands. With two omnis there is no level difference at all: find the spacing that makes the choir fill the speakers (SRA 120° ± 8°).', lock: { ens: 'choir', w: 120, p: 'omni', a: 0 },
+      checks: [['Both mics on omni', () => S.p === 'omni'], ['SRA within 8° of the choir (120°)', (R) => R != null && Math.abs(R - 120) <= 8]],
+      end: 'With omnis it is all time difference: the wider the spacing, the narrower the angle the pair covers, and the wider the image.' },
+    quartet: { title: 'Fit the quartet', text: 'The string quartet spans 100° from the pair. With two cardioids, choose a spacing and an angle so it fills the speakers exactly (SRA 100° ± 6°).', lock: { ens: 'quartet', w: 100, p: 'card' },
+      checks: [['Both mics on cardioid', () => S.p === 'card'], ['SRA within 6° of the quartet (100°)', (R) => R != null && Math.abs(R - 100) <= 6]],
+      end: 'There is more than one answer: 17 cm at about 125°, 30 cm at about 80°, 10 cm at about 140°… Many pairs give the same angle. That is the idea of Williams\' stereophonic zoom.' },
+    zoom: { title: 'The stereophonic zoom', text: 'Get an SRA of 90° (± 5°) with cardioids twice: once with the mics closer than 20 cm, once with them more than 35 cm apart. Same width, a different sound: more angle means more level difference, more spacing means more time difference and more space.', lock: { p: 'card', w: 90, ens: 'quartet' },
+      checks: [['90° with the mics closer than 20 cm', () => zoomHit.near], ['90° with the mics more than 35 cm apart', () => zoomHit.far]],
+      end: 'Williams called this the stereophonic zoom: one recording angle, many pairs. You choose between them by the balance of level and time difference, and by how much room you want.' },
+  };
+  const zoomHit = { near: false, far: false };
+  const TASK = new URLSearchParams(location.search).get('task');
+  const T = TASKS[TASK] || null;
+  let done = false;
+
+  function checkTask(R) {
+    if (!T) return;
+    if (TASK === 'zoom' && S.p === 'card' && R != null && Math.abs(R - 90) <= 5) { if (S.d < 20) zoomHit.near = true; if (S.d > 35) zoomHit.far = true; }
+    const res = T.checks.map(([t, f]) => [t, !!f(R)]);
+    const box = $('#task');
+    const all = res.every((r) => r[1]);
+    if (all && !done) { done = true; tell({ type: 'task', task: TASK }); }
+    box.classList.toggle('done', done);
+    box.replaceChildren(
+      Object.assign(document.createElement('h2'), { textContent: done ? 'Task done' : 'Your task' }),
+      Object.assign(document.createElement('p'), { innerHTML: `<b>${T.title}.</b> ` }),
+      Object.assign(document.createElement('ul'), {}),
+    );
+    box.children[1].append(T.text);
+    box.children[2].replaceChildren(...res.map(([t, ok]) => Object.assign(document.createElement('li'), { textContent: t, className: ok ? 'ok' : '' })));
+    if (done) {
+      const bar = document.createElement('div'); bar.className = 'donebar';
+      bar.append(`✓ ${T.end}`);
+      if (EMBED) { const b = document.createElement('button'); b.type = 'button'; b.className = 'primary'; b.textContent = 'Close and continue →'; b.onclick = () => tell({ type: 'close' }); bar.append(b); }
+      box.append(bar);
+    }
+  }
+
+  if (T) {
+    $('#task').hidden = false;
+    if (T.lock) Object.assign(S, T.lock);
+    if (TASK === 'xy' || TASK === 'ortf') Object.assign(S, { p: 'omni', d: 40, a: 0, w: 100, ens: 'quartet' });
+    if (TASK === 'blumlein') Object.assign(S, { p: 'card', d: 17, a: 110, w: 160, ens: 'quartet' });
+    if (TASK === 'ab') S.d = 10;
+    if (TASK === 'quartet') Object.assign(S, { d: 0, a: 90 });
+    if (TASK === 'zoom') Object.assign(S, { d: 0, a: 90 });
+    if (T.lock && 'w' in T.lock) $('#w').disabled = true;
+    if (T.lock && 'ens' in T.lock) $('#ens').disabled = true;
+  }
+  sync();
+})();
+</script>
+</body>
+</html>

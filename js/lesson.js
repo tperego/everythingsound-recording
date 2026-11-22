@@ -1,12 +1,12 @@
 // A Recording lesson: the video, then its exercises (questions, desk tasks or the exam).
 // Desk tasks and the exam run in desk.html inside the page; the desk tells us when they're done.
 
-import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611212357';
-import { findLesson } from './lessons.js?v=202611212357';
-import { h, store, toast } from './util.js?v=202611212357';
-import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611212357';
-import { examSheet, sheetRows, sheetTotals } from './examsheet.js?v=202611212357';
-import { awardXp, awardZen, enrolled, mySubmissions, submitOnline, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611212357';
+import { COURSE, courseLessons, lessonNeighbours, lessonProgress } from './course.js?v=202611220002';
+import { findLesson } from './lessons.js?v=202611220002';
+import { h, store, toast } from './util.js?v=202611220002';
+import { MASTER_SVG, INTRO, LOCKED, PASSED, WON, WRONG, pick, say, setVoice, voiceOn } from './zen-master.js?v=202611220002';
+import { examSheet, sheetRows, sheetTotals } from './examsheet.js?v=202611220002';
+import { awardXp, awardZen, enrolled, mySubmissions, submitOnline, joinCourse, myProfile, renderAccountWidget, saveProgress } from './auth.js?v=202611220002';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -89,9 +89,11 @@ function deskCard(ex) {
     const prev = lesson.exercises.find((e) => e.id === ex.after);
     return h('p', { class: 'muted' }, `🔒 Opens when you pass ${prev ? prev.title.split(' · ')[0] : 'the one before'}.`);
   }
-  const open = () => openDesk(ex, `desk.html?task=${encodeURIComponent(ex.task)}#console`);
+  const stereo = ex.sim === 'stereo';
+  const open = () => openDesk(ex, stereo ? `stereo.html?task=${encodeURIComponent(ex.task)}` : `desk.html?task=${encodeURIComponent(ex.task)}#console`);
+  const again = status()[ex.id] === 'passed';
   return h('div', { class: 'row wrap' },
-    h('button', { type: 'button', class: 'btn primary', onclick: open }, status()[ex.id] === 'passed' ? 'Do it again on the desk' : 'Open on the desk'),
+    h('button', { type: 'button', class: 'btn primary', onclick: open }, stereo ? (again ? 'Do it again in the simulator' : 'Open the stereo simulator') : (again ? 'Do it again on the desk' : 'Open on the desk')),
     ex.at != null || ex.v != null ? watchPart(ex.at, ex.v || 0) : '');
 }
 
@@ -142,6 +144,7 @@ function examCard(ex) {
 function openDesk(ex, url) {
   openTask = ex;
   $('#desktitle').textContent = ex.title;
+  $('#deskclose').textContent = ex.sim === 'stereo' ? 'Close the simulator' : 'Close the desk';
   $('#desk').src = url; $('#deskpop').href = url;
   $('#deskwrap').hidden = false; $('#deskdone').hidden = true;
   $('#deskwrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -162,8 +165,9 @@ $('#deskdone-btn').onclick = () => closeDesk(true);
 // Done: a clear reminder above the desk to close it and carry on.
 function deskDone(text) {
   const left = lesson.exercises.filter((e) => status()[e.id] !== 'passed').length;
-  $('#deskdone-text').textContent = text + (left ? ` Close the desk to continue with the next exercise.` : ' That was the last one in this lesson: close the desk to continue.');
-  $('#deskdone-btn').textContent = left ? 'Close the desk and continue →' : 'Close the desk: lesson complete';
+  const what = openTask?.sim === 'stereo' ? 'the simulator' : 'the desk';
+  $('#deskdone-text').textContent = text + (left ? ` Close ${what} to continue with the next exercise.` : ` That was the last one in this lesson: close ${what} to continue.`);
+  $('#deskdone-btn').textContent = left ? `Close ${what} and continue →` : `Close ${what}: lesson complete`;
   $('#deskdone').hidden = false;
   $('#deskdone').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -247,7 +251,7 @@ function draw() {
   $('#exercises').replaceChildren(note, ...lesson.exercises.map((ex, i) => {
     const done = status()[ex.id] === 'passed';
     return h('section', { class: `card ex ${done ? 'done' : ''}` },
-      h('div', { class: 'ex-head' }, h('span', { class: 'eyebrow' }, `${i + 1} · ${{ quiz: 'Questions', desk: 'On the desk', exam: 'Exam' }[ex.kind]}`), h('span', { class: 'ex-state' }, done ? '✓ Done' : '')),
+      h('div', { class: 'ex-head' }, h('span', { class: 'eyebrow' }, `${i + 1} · ${ex.sim === 'stereo' ? 'Stereo simulator' : { quiz: 'Questions', desk: 'On the desk', exam: 'Exam' }[ex.kind]}`), h('span', { class: 'ex-state' }, done ? '✓ Done' : '')),
       h('h2', {}, ex.title),
       ex.kind === 'quiz' ? quizCard(ex) : ex.kind === 'desk' ? deskCard(ex) : examCard(ex));
   }));

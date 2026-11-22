@@ -1,11 +1,11 @@
 // Teacher: every Recording student's level, badges, streak, lesson progress and exams (same page as Music Theory's).
 // The database only lets the teacher account read other students' rows (supabase/schema.sql, game.sql).
 
-import { classData, myProfile, renderAccountWidget, sb } from './auth.js?v=202611212357';
-import { courseLessons } from './course.js?v=202611212357';
-import { earnedBadges, journeyCard, summarise } from './game.js?v=202611212357';
-import { findExercise } from './lessons.js?v=202611212357';
-import { h, store, toast } from './util.js?v=202611212357';
+import { classData, myProfile, renderAccountWidget, sb } from './auth.js?v=202611220002';
+import { courseLessons } from './course.js?v=202611220002';
+import { earnedBadges, journeyCard, summarise } from './game.js?v=202611220002';
+import { findExercise } from './lessons.js?v=202611220002';
+import { h, store, toast } from './util.js?v=202611220002';
 
 const THEORY = 'https://theory.everythingsoundacademy.com/students.html';
 const listEl = document.getElementById('student-list');
