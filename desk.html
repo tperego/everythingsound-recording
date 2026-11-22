@@ -113,7 +113,7 @@ button{font-family:var(--font)}
 .ret .b{font-size:10px;padding:3px 0}
 .dynu{width:130px}
 .dyn-ch{display:block;font-weight:600;color:var(--sig);font-size:10px;letter-spacing:0}
-.gate-note{font-size:9.5px;color:var(--muted);border-top:1px dashed var(--line);padding-top:4px;text-align:center}
+.gate-t{font-size:9.5px;font-weight:600;letter-spacing:.06em;color:var(--muted);border-top:1px dashed var(--line);padding-top:4px;text-align:center}
 .grleds{display:flex;flex-direction:column;gap:2px;font-family:var(--mono);font-size:9px}
 .grleds span{display:flex;align-items:center;gap:4px}
 .grleds i{width:9px;height:9px;border-radius:50%;background:var(--led-off);border:1px solid var(--line)}
@@ -631,7 +631,7 @@ function defaultState(){
     comp2:{thr:-20,ratio:2,att:30,rel:300,mk:4,byp:false},
     c:{mon:'mix',dim:false,mcut:false,mono:false,soloMode:'pfl',mixComp:false,mixIns:false,recIns:false,master:75,recMaster:75,mfSel:'rec',monLvl:8,
        bc:{thr:-10,ratio:'4',att:'30',rel:'auto',mk:2},
-       dyn:[{in:true,ratio:4,thr:0,rel:0.5,fast:false,pk:false},{in:true,ratio:4,thr:0,rel:0.5,fast:false,pk:false}],
+       dyn:[0,1].map(()=>({in:true,ratio:4,thr:0,rel:0.5,fast:false,pk:false,gRange:0,gThr:-30,gHold:1,gRel:1,exp:false})),
        trkM:[1,2,3,4,5,6,7,8].map(()=>({lvl:8,afl:false})),
        osc:{on:false,pink:false,lvl:8,freq:'1K',trk:false,rec:false,mix:false},
        tb:{all:false,fba:false,fbb:false,lvl:6},
@@ -779,6 +779,8 @@ const TIPS={
   dynU:'Assigns centre‑section Dynamics unit 1 or 2 to this channel. The AWS has no compressor on each channel: there are two shared units in the centre, and each can be on one channel at a time. Pressing it here takes the unit off any other channel.',
   dynUnit:'Centre Dynamics unit (compressor). RATIO 1–20, THRESHOLD +10 to −20, RELEASE 0.1–4 s, FST ATK for a fast attack. The header shows which channel it is assigned to; the LEDs show gain reduction in dB.',
   dynFast:'FST ATK: fast attack (1 ms instead of 10 ms).', dynPk:'PK: peak detection. Shown for completeness; the simulator\'s detector does not change.',
+  dynGate:'Gate / expander (the black section). RANGE sets how far the gate closes, up to 40 dB; fully left the section is off. THRESHOLD is the level that opens it, in channel‑meter dB. HOLD keeps it open after the signal falls below the threshold; RELEASE is how fast it then closes. On a kick: threshold above the spill from the other drums, below the kick hits; hold and release short.',
+  dynExp:'EXP: the section works as a downward expander (signals below the threshold are turned down gradually, 2:1) instead of a gate.',
   dynIn:'IN: switches the unit in. Off, the assigned channel passes through unprocessed.',
   sel:'SEL: selects this channel (for the EQ panel and the schematic).', chMeter:'Channel meter, at the top of the strip as on the desk: metering stage 1. Gain the input so it sits just under the orange.',
   cuePan:'Cue pan: places this channel in the stereo cue mix.',
@@ -966,7 +968,10 @@ function centreHTML(){
       <div class="kb">${RK({path:p+'.ratio',label:'RATIO',min:1,max:20,step:0.5,sm:true,fmt:'ratio',tip:'dynUnit',aria:'Dynamics '+(u+1)+' ratio',color:'#2f6fa3'})}${pb(p+'.pk','PK','amber','dynPk')}</div>
       <div class="kb">${pb(p+'.fast','FST ATK','amber','dynFast')}${RK({path:p+'.thr',label:'THRESHOLD',min:-20,max:10,sm:true,fmt:'db',tip:'dynUnit',aria:'Dynamics '+(u+1)+' threshold',color:'#2f6fa3'})}</div>
       <div class="kb">${RK({path:p+'.rel',label:'RELEASE',min:0.1,max:4,step:0.1,sm:true,fmt:'s',tip:'dynUnit',aria:'Dynamics '+(u+1)+' release',color:'#2f6fa3'})}<div class="grleds" id="grl-${u}" aria-label="Gain reduction">${[20,14,10,6,3].map(g=>`<span data-g="${g}"><i></i>${g}</span>`).join('')}</div></div>
-      <div class="gate-note">GATE / EXP not simulated</div>
+      <div class="gate-t">GATE / EXP</div>
+      <div class="kb">${RK({path:p+'.gRange',label:'RANGE',min:0,max:40,sm:true,fmt:'db',tip:'dynGate',aria:'Dynamics '+(u+1)+' gate range',color:'#2a2f37'})}${pb(p+'.exp','EXP','amber','dynExp')}</div>
+      <div class="kb">${RK({path:p+'.gThr',label:'THRESHOLD',min:-30,max:10,sm:true,fmt:'db',tip:'dynGate',aria:'Dynamics '+(u+1)+' gate threshold',color:'#2a2f37'})}</div>
+      <div class="kb">${RK({path:p+'.gHold',label:'HOLD',min:0,max:4,step:0.05,sm:true,fmt:'s',tip:'dynGate',aria:'Dynamics '+(u+1)+' gate hold',color:'#2a2f37'})}${RK({path:p+'.gRel',label:'RELEASE',min:0.01,max:4,step:0.01,sm:true,fmt:'s',tip:'dynGate',aria:'Dynamics '+(u+1)+' gate release',color:'#2a2f37'})}</div>
       <div class="row">${pb(p+'.in','IN','green','dynIn')}</div></div>`; };
   return `<div class="centre">
     <div class="ccol">
@@ -1912,7 +1917,7 @@ function makeParts(){
     for(let i=0;i<len;i++){ const w=Math.random()*2-1; b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759; b2=0.969*b2+w*0.153852; b3=0.8665*b3+w*0.3104856; b4=0.55*b4+w*0.5329522; b5=-0.7616*b5-w*0.016898; d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926; }
     const s=ctx.createBufferSource(); s.buffer=b; s.loop=true; s.connect(out); s.start(); return {out,play(){}}; })();
   return {
-    kick:part(0.32,(s,t,o)=>{ if(KICK.includes(s%16)) kickHit(t,1,o); }),
+    kick:part(0.32,(s,t,o)=>{ const q=s%16; if(KICK.includes(q)) kickHit(t,1,o); if(SNARE.includes(q)) snareHit(t,0.6,o); if(q%2===0) noiseHit(t,0.045,0.3,'highpass',8000,0,o); }), // spill: snare about −14 dB, hi-hat about −20 dB under the kick
     snare:part(0.3,(s,t,o)=>{ if(SNARE.includes(s%16)) snareHit(t,1.4,o); }),
     hat:part(0.35,(step,t,o)=>{ const s=step%16; if(s%2) return; noiseHit(t,s===14?0.28:0.045,s%4===0?0.9:0.55,'highpass',8000,0,o); }),
     oh:part(0.3,(step,t,o)=>{ const s=step%16; if(step===0) noiseHit(t,1.8,0.9,'highpass',4500,0,o); else if(s%2===0) noiseHit(t,s===14?0.25:0.05,0.6,'highpass',7500,0,o);
@@ -1922,8 +1927,17 @@ function makeParts(){
       const e=G(0); env(e,t,0.005,1,d,0.04); x.connect(f); f.connect(e); e.connect(o); x.start(t); x.stop(t+d+0.02); }),
     vocal, synth, room, osc, noise };
 }
+const GATE_SRC=`class G extends AudioWorkletProcessor{static get parameterDescriptors(){return[{name:'thr',defaultValue:-100},{name:'range',defaultValue:0},{name:'hold',defaultValue:0.1},{name:'rel',defaultValue:0.3},{name:'exp',defaultValue:0}]}
+constructor(){super();this.env=0;this.g=1;this.h=0}
+process(I,O,P){const i=I[0],o=O[0];if(!i||!i.length){return true}const n=i[0].length,sr=sampleRate,thr=Math.pow(10,P.thr[0]/20),rg=P.range[0],fl=Math.pow(10,-rg/20),hold=P.hold[0]*sr,rel=Math.exp(-1/(Math.max(0.01,P.rel[0])*sr)),att=Math.exp(-1/(0.0005*sr)),ed=Math.exp(-1/(0.01*sr)),ex=P.exp[0]>0.5;
+for(let k=0;k<n;k++){let a=0;for(let c=0;c<i.length;c++){const v=Math.abs(i[c][k]);if(v>a)a=v}this.env=a>this.env?a:this.env*ed;let tg=1;
+if(rg<=0.01)tg=1;else if(this.env>=thr){tg=1;this.h=hold}else if(this.h>0){this.h--;tg=1}else tg=ex?Math.max(fl,this.env/thr):fl;
+this.g=tg>this.g?tg+(this.g-tg)*att:tg+(this.g-tg)*rel;for(let c=0;c<o.length;c++){const x=i[c]||i[0];o[c][k]=x[k]*this.g}}return true}}
+registerProcessor('es-gate',G);`;
 function initAudio(){
   const ctx=A.ctx=new (window.AudioContext||window.webkitAudioContext)();
+  // the gate / expander runs in an AudioWorklet; until it loads (or where it cannot) the gate is silent in the audio only
+  try{ ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([GATE_SRC],{type:'application/javascript'}))).then(()=>{ A.ch.forEach(x=>{ x.gate=new AudioWorkletNode(ctx,'es-gate',{outputChannelCount:[2]}); }); A.gateOk=true; render(); }).catch(()=>{}); }catch(e){}
   const nb=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate), nd=nb.getChannelData(0); for(let i=0;i<nd.length;i++) nd[i]=Math.random()*2-1; A.noiseBuf=nb;
   A.master=G(0.6); A.lim=ctx.createDynamicsCompressor(); A.lim.threshold.value=-3; A.lim.ratio.value=20; A.lim.attack.value=0.002; A.lim.release.value=0.1;
   A.master.connect(A.lim); A.lim.connect(ctx.destination); A.masterAn=ctx.createAnalyser(); A.masterAn.fftSize=512; A.lim.connect(A.masterAn);
@@ -2010,9 +2024,10 @@ function rewire(R){
     procOrder(c).forEach(p=>{
       if(p==='ins'){ E(prev,OUT['is'+n]); if(c.ins) prev=IN['ir'+n]; }
       else if(p==='eq'){ E(prev,x.eq.in); prev=x.eq.out; }
-      else if(dynOn(c)){ E(prev,x.dyn.in); prev=x.dyn.out; } });
+      else if(dynOn(c)){ E(prev,x.dyn.in); prev=x.dyn.out; if(x.gate){ E(prev,x.gate); prev=x.gate; } } });
     E(prev,x.pre); applyEQ(x.eq,c,t);
-    if(dynOn(c)){ const u=C.dyn[c.dyn-1], th=u.thr-18; x.dyn.set(true,th,u.ratio,u.fast?0.001:0.01,u.rel,1); }
+    if(dynOn(c)){ const u=C.dyn[c.dyn-1], th=u.thr-18; x.dyn.set(true,th,u.ratio,u.fast?0.001:0.01,u.rel,1);
+      if(x.gate){ const P=x.gate.parameters; P.get('thr').setValueAtTime(u.gThr-16,t); P.get('range').setValueAtTime(u.gRange,t); P.get('hold').setValueAtTime(u.gHold,t); P.get('rel').setValueAtTime(u.gRel,t); P.get('exp').setValueAtTime(u.exp?1:0,t); } }
     else x.dyn.set(false,0,1,0.01,0.25,1);
     E(x.pre,x.fader); set(x.fader.gain,fdrGain(c.fader,c.cut)); set(x.pan.pan,c.pan/5);
     const post=x.pan;
@@ -2189,6 +2204,34 @@ Object.assign(TASKS,{
     watch:R=>has(R.F.mixo.sigs,'Click')?'One take. You spent it on a metronome. The gate closes.':'',
     ok:R=>S.daw.tr.some(t=>t.take&&t.take.kind==='buf'&&has(t.take.sigs,'Vocal (DAW)'))&&!!TK.tr.offTape&&!!TK.tr.cueRec&&S.daw.ses.closed&&S.daw.ses.saved&&!S.daw.ses.dirty&&!S.room[0].plug&&!S.ch[0].phantom&&!S.hp.on},
 });
+// ---- Module 5: mixing on the console. The band is on channels 1–7 on the MIX bus; channel 8 is free. ----
+STEP.mix=()=>{ const PAN=[0,0,0,0,0,-2,0,0];
+  S.ch.forEach((c,i)=>{ const m=mlInfo(i+1); c.flip=true; if(!m) return; c.phantom=m.cond; c.gain=Math.max(15,Math.min(75,Math.round(-m.lvl))); c.rec=false; c.mix=i<7; c.fader=i<7?70:0; c.pan=PAN[i]; });
+  S.room[7].plug=false; S.ch[7].flip=false; S.ch[7].phantom=false; S.ch[7].gain=15;
+  S.c.master=75; S.c.mfSel='mix'; S.c.mon='mix'; S.c.monLvl=6; S.c.mcut=false; S.daw.tr.forEach(t=>{ t.take=null; }); S.daw.play=false; };
+// The kick mic hears the snare about 14 dB and the hi-hat about 20 dB under the kick (spill): the gate must sit between.
+const SPILL=14;
+const gateOf=k=>{ const c=S.ch[k], L=LAST.chans[k].chLvl, u=c.dyn?S.c.dyn[c.dyn-1]:null; return {L,u,on:!!u&&u.in&&u.gRange>0}; };
+const grOf=k=>{ const c=S.ch[k], L=LAST.chans[k].chLvl, u=c.dyn?S.c.dyn[c.dyn-1]:null; if(!u||!u.in||L===null) return 0; return L>u.thr?(L-u.thr)*(1-1/u.ratio):0; };
+const sgn=v=>(v>0?'+':v<0?'−':'')+Math.abs(Math.round(v));
+Object.assign(TASKS,{
+  'gate-kick':{t:'Gate the kick',base:'mix',steps:['mix'],
+    p:'The band is up on the MIX bus. The kick mic (channel 1) also picks up the snare and the hi-hat. Put channel 1 through DYNAMICS 1 and use its gate (the black section) so only the kick hits get through: range up, the threshold above the spill and below the kick, hold and release short. Solo channel 1 and listen as you set it.',
+    h:'CH 1: press DYNAMICS 1. Centre, DYNAMICS 1: IN, gate RANGE up, then THRESHOLD between the spill and the kick, HOLD and RELEASE short.'},
+  'comp-vox':{t:'Compress the vocal',base:'mix',steps:['mix'],
+    p:'Put the vocal (channel 7) through DYNAMICS 2 as a compressor only: gate off (range fully left). Set a ratio between 2:1 and 10:1 (fully clockwise is a limiter) and bring the threshold down until the vocal is turned down by 3 to 10 dB on its loudest parts. Listen with and without IN.',
+    h:'CH 7: DYNAMICS 2. Centre, DYNAMICS 2: IN, gate RANGE fully left, RATIO about 4:1, THRESHOLD down until the gain reduction reads 3 to 10 dB.'},
+  'rev-send':{t:'Reverb on the vocal',base:'mix',steps:['mix','revHalf'],
+    p:'Give the vocal (channel 7) some outboard reverb. FX 1 is normalled to the reverb input, and the reverb output to stereo return 1. Send the vocal on FX 1, keep the reverb 100% wet (the dry vocal is already on its own fader), and bring the reverb back on ST RET 1 to the MIX bus. Two independent levels: the fader for the dry voice, the send for the reverb.',
+    h:'CH 7: FX1 ON, FX1 level up. Reverb tab: MIX to 100%, BYPASS off. Centre: ST RET 1 MIX and LEVEL up.'},
+  'ob-comp':{t:'The outboard compressor on a track bus',base:'mix',steps:['mix'],
+    p:'Feed the vocal (channel 7) to COMP 1 through track bus 7, the way you would in the studio, and bring the compressor back on channel 8 (free, on LINE) to the MIX bus. Set the compressor so it works: ratio 2:1 or more, threshold −10 dB or lower, not bypassed.',
+    h:'CH 7: track bus 7, fader up. TRACK BUS MASTERS: BUS 7 up. Patchbay: Track bus out 7 → Comp in (FX unit inputs), Comp out → Channel line in 8. CH 8: FLIP off (line), MIX, fader up. Compressor tab: RATIO, THRESHOLD.'},
+  print:{t:'Print the mix',base:'mix',steps:['mix'],
+    p:'Record the mix into Pro Tools. Patch Mix out into DAW in 7 (the DAW in, never a line in: that would send the mix back into the desk). Track 7 records from IN 7 and its output must not come back into the desk: mute it. Start the audio, arm track 7 and record one pass while you listen to the mix.',
+    h:'Patchbay: Mix out → DAW inputs 7. DAW tab: track 7 input IN 7, MUTE on, REC, then ▶ Start audio and ● RECORD.'},
+});
+STEP.revHalf=()=>{ S.rev.mix=50; };
 STEP.zen1Break=()=>{ S.ch[0].rec=false; S.c.recMaster=0; S.daw.tr[0].out=6; S.ch[4].flip=true; S.c.mon='rec'; };
 STEP['snare-off']=()=>STEP.snare(false); STEP['snare-on']=()=>STEP.snare(true);
 // Live checklist for each task: every line ticks when that step is right; the task is done when all are.
@@ -2210,6 +2253,25 @@ const CHK={
   'trk-bus':R=>[['CH 1 on track bus 1',S.ch[0].trk.includes(1)],['CH 2 on track bus 1',S.ch[1].trk.includes(1)],['Both faders up',S.ch[0].fader>0&&S.ch[1].fader>0],['BUS 1 master up',S.c.trkM[0].lvl>0],['Patched: Track bus 1 out → DAW in 7',cable('tb1','dawi7')],['Vocal and snare at DAW in 7',has(R.D.dawi[6],'Vocal')&&has(R.D.dawi[6],'Snare')]],
 };
 
+Object.assign(CHK,{
+  'gate-kick':R=>{ const g=gateOf(0), u=g.u, L=g.L, lo=L===null?0:L-SPILL+2, hi=L===null?0:L-2;
+    return [['CH 1 on DYNAMICS 1',S.ch[0].dyn===1],['DYNAMICS 1 switched IN',S.c.dyn[0].in],['Gate RANGE up, 20 dB or more',S.c.dyn[0].gRange>=20],
+      ['Threshold above the spill, below the kick'+(L===null?'':` (kick ${sgn(L)} dB, spill up to ${sgn(L-SPILL)} dB, threshold ${sgn(S.c.dyn[0].gThr)} dB)`),S.ch[0].dyn===1&&L!==null&&S.c.dyn[0].gThr>=lo&&S.c.dyn[0].gThr<=hi],
+      ['Hold short (0.5 s or less)',S.c.dyn[0].gHold<=0.5],['Release short (0.5 s or less)',S.c.dyn[0].gRel<=0.5],['Kick still on the MIX bus',has(R.F.mixo.sigs,'Kick')]]; },
+  'comp-vox':R=>{ const u=S.c.dyn[1], gr=grOf(6);
+    return [['CH 7 on DYNAMICS 2',S.ch[6].dyn===2],['DYNAMICS 2 switched IN',u.in],['Gate off (RANGE fully left)',u.gRange===0],['Ratio between 2:1 and 10:1 (now '+u.ratio+':1)',u.ratio>=2&&u.ratio<=10],
+      ['Gain reduction 3 to 10 dB on the peaks'+(S.ch[6].dyn===2?' (now '+gr.toFixed(1)+' dB)':''),S.ch[6].dyn===2&&gr>=3&&gr<=10],['Vocal still on the MIX bus',has(R.F.mixo.sigs,'Vocal')]]; },
+  'rev-send':R=>{ const c=S.ch[6], r=S.c.ret[0];
+    return [['CH 7 FX1 ON, level up',c.fx1On&&c.fx1>0&&!c.fx1to3],['FX 1 master up',S.c.fx[0].lvl>0],['Reverb 100% wet, not bypassed',S.rev.mix===100&&!S.rev.byp],['ST RET 1 on MIX, level up',r.mix&&r.lvl>0],
+      ['Reverb on the vocal in the mix',has(R.F.mixo.sigs,'Reverb: Vocal')],['Dry vocal still on its own fader',c.mix&&c.fader>0]]; },
+  'ob-comp':R=>{ const c=S.ch[6], c8=S.ch[7], cp=S.comp;
+    return [['CH 7 on track bus 7',c.trk.includes(7)],['BUS 7 master up',S.c.trkM[6].lvl>0],['Patched: Track bus 7 → Comp in',cable('tb7','cpi')],['Patched: Comp out → Channel line in 8',cable('cpo','line8')],
+      ['CH 8 on LINE (FLIP off), MIX, fader up',LN(c8)&&c8.mix&&c8.fader>0],['Compressor working: ratio 2:1 or more, threshold −10 dB or lower, not bypassed',!cp.byp&&cp.ratio>=2&&cp.thr<=-10],
+      ['Compressed vocal back on channel 8',has(R.chans[7].chIn,'Vocal')&&has(R.F.mixo.sigs,'Vocal')]]; },
+  print:R=>{ const t=S.daw.tr[6], tk=t.take&&t.take.kind==='buf'?t.take:null;
+    return [['Patched: Mix out → DAW in 7',cable('mixo','dawi7')],['Mix arriving at DAW in 7',has(R.D.dawi[6],'Vocal')],['Track 7 records from IN 7',t.inp===7],['Track 7 muted: it must not come back into the desk',t.mute],['No feedback loop',!R.loop],
+      ['Audio started',!!A.on],['A pass of the mix recorded on track 7',!!tk&&tk.sigs.length>1]]; },
+});
 function taskTrack(R){
   const T=TK.tr, c=S.ch[0], P=TK.prev||{};
   if(S.room[0].plug&&!P.plug&&c.phantom) T.plug48=true;
@@ -2242,7 +2304,7 @@ function drawTask(R){
     zen(TASK==='zen3'?'There is nothing left for me to teach you. Go. Record someone else.':T.strict?'Good. Do not smile yet.':'Good. Close the desk. Walk on.','pleased'); }
 }
 if(TASK&&TASKS[TASK]){
-  const T=TASKS[TASK]; S=examState(); T.steps.forEach(k=>STEP[k]()); if(S.room[0].plug){ S.mic1=readyMic(); S.daw.ses={open:true,name:'Session',saved:true,dirty:false,closed:false,ever:true}; S.daw.tr.forEach(t=>t.made=true); } TK.done=false;
+  const T=TASKS[TASK]; S=T.base==='mix'?defaultState():examState(); T.steps.forEach(k=>STEP[k]()); if(S.room[0].plug){ S.mic1=readyMic(); S.daw.ses={open:true,name:'Session',saved:true,dirty:false,closed:false,ever:true}; S.daw.tr.forEach(t=>t.made=true); } TK.done=false;
   const bar=document.createElement('section'); bar.className='taskbar'; bar.setAttribute('aria-label','Task');
   bar.innerHTML=`<div class="task-h"><b>${T.t}</b><span class="taskst" id="taskst">In progress</span></div><p>${T.p}</p>${T.strict?'':'<ul class="taskchk" id="taskchk" aria-label="Steps"></ul>'}<p class="taskbad" id="taskbad" hidden></p><p class="taskok" id="taskok" hidden><span>✓ Task done: it is ticked off in your lesson.</span>${EMBED?'<button class="b" id="taskclose" type="button">Close the desk and continue →</button>':''}</p>${T.h?`<details><summary>Hint</summary>${T.h}</details>`:''}`;
   document.querySelector('.tabs').before(bar);
