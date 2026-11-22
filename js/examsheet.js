@@ -2,7 +2,7 @@
 // The desk sends every block (checks); the tutor confirms or changes the simulator's scores and marks the
 // tutor blocks; the marked sheet is saved as scores: [{q, name, by, score, max: 1}].
 
-import { h } from './util.js?v=202611220042';
+import { h } from './util.js?v=202611221044';
 
 const QTITLE = {
   Q1: 'Mic on a boom stand, patched to Input X; headphones for the musician', Q2: 'Mic signal into the console and on to the DAW; meter off-bus',
