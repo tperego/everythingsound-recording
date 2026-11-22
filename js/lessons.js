@@ -230,12 +230,61 @@ export const LESSONS = [
         { q: 'Preview a value, select the area and punch it in. How do you avoid waiting for a whole pass?', a: ['Press stop at once', 'Use write on stop to the next breakpoint', 'Turn automation off'], ok: 1, v: 1, at: 393 },
       ] }] },
 
-  // ---------------- Module 5: mixing on the console (exercises coming) ----------------
-  { id: 'rec-20-dyn-eq', title: 'In-console compressors and EQ', videos: [V('iV4s19G1C3w', 'In-console compressors and EQ')], exercises: [] },
-  { id: 'rec-21-outboard', title: 'External reverb and compressor', videos: [V('RYRstfSd1HA', 'Reverb and compressor external')], exercises: [] },
+  // ---------------- Module 5: mixing on the console ----------------
+  { id: 'rec-20-dyn-eq', title: 'In-console compressors and EQ',
+    about: 'The two centre dynamics units: a gate or expander on the kick, a compressor on the vocal, the order of EQ and dynamics (IP and OP), and the mix bus compressor.',
+    videos: [V('iV4s19G1C3w', 'In-console compressors and EQ')],
+    exercises: [
+      { id: 'q', kind: 'quiz', title: 'Dynamics and EQ', questions: [
+        { q: 'Each dynamics unit has two sections. Which is which?', a: ['Blue is the compressor/limiter, black is the gate/expander', 'Both are compressors', 'Blue is the EQ, black the gate'], ok: 0, at: 27 },
+        { q: 'The gate\'s range knob is fully to the left. What does the gate do?', a: ['It cuts 40 dB', 'Nothing: the section is inactive', 'It turns into a compressor'], ok: 1, at: 54 },
+        { q: 'You gate the kick to get rid of the hi-hat. Where do you set the threshold?', a: ['All the way down, so everything passes', 'Where the kick hits open the gate and the hi-hat stays below it', 'All the way up, so nothing passes'], ok: 1, at: 84 },
+        { q: 'What does the gate\'s hold control set?', a: ['How long the gate stays open after the signal falls below the threshold', 'How loud the kick is', 'The ratio'], ok: 0, at: 142 },
+        { q: 'Nothing pressed: which comes first on the channel?', a: ['The dynamics, then the EQ', 'The EQ, then the dynamics. IP puts the dynamics (and inserts) before the EQ, OP after it', 'They run side by side'], ok: 1, at: 302 },
+        { q: 'The compressor\'s knee is soft (over easy) by default. Which button gives a hard knee?', a: ['PK', 'IP', 'EFX'], ok: 0, at: 425 },
+        { q: 'The ratio knob fully clockwise makes the unit…', a: ['Inactive', 'A true limiter', 'A gate'], ok: 1, at: 445 },
+        { q: 'The attack is normally program dependent (3 to 30 ms). For very fast notes you…', a: ['Press fast attack', 'Raise the release', 'Lower the ratio'], ok: 0, at: 550 },
+        { q: 'How do you use the compressor on the mix bus?', a: ['Patch it on the patchbay', 'Press its IN button and select the bus it works on', 'It is always on'], ok: 1, at: 570 },
+      ] }] },
+  { id: 'rec-21-outboard', title: 'External reverb and compressor',
+    about: 'Outboard gear through the patchbay: a reverb fed from an independent effects send, printing the reverb into Pro Tools, and a hardware compressor on track buses 7 and 8, returned on spare channels.',
+    videos: [V('RYRstfSd1HA', 'Reverb and compressor external')],
+    exercises: [
+      { id: 'q', kind: 'quiz', title: 'Outboard', questions: [
+        { q: 'You feed the reverb from a track bus, post fader, with the pan button on. What is the drawback?', a: ['The reverb is in mono', 'The send level is tied to the fader: you cannot set the dry and reverb levels apart', 'It does not work at all'], ok: 1, at: 0 },
+        { q: 'How do you get an independent reverb send?', a: ['Use the aux (stereo cue) send and press EFX', 'Raise the channel fader', 'Use a second channel'], ok: 0, at: 28 },
+        { q: 'You put that send post fader. Why is that usually not what you want here?', a: ['It is louder', 'It ties the send to the fader again: pre keeps it independent', 'It mutes the reverb'], ok: 1, at: 125 },
+        { q: 'You print the reverb returning on lines 15 and 16 into a new stereo track. Where does that track\'s output go?', a: ['To the speakers', 'To a channel outside the console\'s range, and muted', 'Back to lines 15 and 16'], ok: 1, at: 192 },
+        { q: 'Track buses 7 and 8 feed the hardware compressor. Where do you hear it?', a: ['You cannot', 'Its outputs come back into spare console channels (for example 18 and 19), panned left and right, on the MIX bus', 'Through the talkback'], ok: 1, at: 276 },
+        { q: 'Setting a compressor, you decide…', a: ['Only the output level', 'The threshold, how fast it acts (attack), how hard (ratio) and how fast it lets go (release)', 'The pan'], ok: 1, at: 363 },
+        { q: 'The meter button on the outboard compressor shows…', a: ['The input level, the output level or the gain reduction', 'The tempo', 'The phantom power'], ok: 0, at: 384 },
+      ] }] },
   { id: 'rec-22-print', title: 'Print and export the mix',
-    videos: [V('qdtjcm5g8XA', 'Print the mix'), V('J0eVmGYvDtw', 'Print the mix: quick version', true), V('TswRsK92Rq4', 'Exporting the stereo mix', true)], exercises: [] },
-  { id: 'rec-23-atmos', title: 'Binaural listening and Dolby Atmos', videos: [V('1a6rh3AO1S8', 'Binaural listening and Dolby Atmos')], exercises: [] },
+    about: 'Record the mix from the console\'s mix output into a stereo Pro Tools track, play the faders as a performance, then export it as a 24-bit WAV.',
+    videos: [V('qdtjcm5g8XA', 'Print the mix'), V('J0eVmGYvDtw', 'Print the mix: quick version', true), V('TswRsK92Rq4', 'Exporting the stereo mix', true)],
+    exercises: [
+      { id: 'q', kind: 'quiz', title: 'Printing', questions: [
+        { q: 'On the patchbay, where do you take the mix from, and where does it go?', a: ['From the mix output (output row) into the DAW in', 'From the mix output into the line in', 'From the DAW out into the mix in'], ok: 0, v: 1, at: 0 },
+        { q: 'Why the DAW in and never the line in?', a: ['The line in is noisier', 'The line in is the console\'s input: the mix would come back to the desk and make a feedback loop', 'There is no difference'], ok: 1, v: 1, at: 26 },
+        { q: 'The new stereo mix track\'s output goes…', a: ['To the main speakers, so you can hear it', 'Outside the console\'s range (for example 41), and muted', 'To channel 1'], ok: 1, v: 1, at: 54 },
+        { q: 'If you heard that track back through the desk while recording, you would…', a: ['Get a better mix', 'Make a feedback loop: break the speakers and your ears', 'Get a delay effect'], ok: 1, v: 0, at: 53 },
+        { q: 'While you print, the faders on the desk…', a: ['Must not move', 'Are the mix: move them as a performance and every move is recorded', 'Are bypassed'], ok: 1, v: 0, at: 154 },
+        { q: 'Why record the mix on playlists?', a: ['To use less disk space', 'You may perform several versions and choose the best one later'], ok: 1, v: 1, at: 81 },
+        { q: 'To listen back to the print you…', a: ['Leave it armed and play', 'Disarm it, then play it back on free channels (for example 21 and 22)', 'Unplug the patch cords'], ok: 1, v: 0, at: 205 },
+        { q: 'The quickest way to export the mix is…', a: ['Right-click the clip in the clip list → Export clips as files', 'Take a screenshot', 'Save the session'], ok: 0, v: 2, at: 49 },
+        { q: 'Which format for the final mix?', a: ['MP3', 'WAV, interleaved, 24 bit, 44.1 kHz', 'Multiple mono AIFF'], ok: 1, v: 2, at: 72 },
+      ] }] },
+  { id: 'rec-23-atmos', title: 'Binaural listening and Dolby Atmos',
+    about: 'Hearing a Dolby Atmos mix in 3D on headphones: the binaural headphone render, the buffer size, and the renderer\'s monitoring.',
+    videos: [V('1a6rh3AO1S8', 'Binaural listening and Dolby Atmos')],
+    exercises: [
+      { id: 'q', kind: 'quiz', title: 'Atmos on headphones', questions: [
+        { q: 'Why use headphones for an Atmos mix on your laptop?', a: ['They are louder', 'A binaural render gives you the heights, sides and back that two speakers cannot', 'Atmos does not play on speakers'], ok: 1, at: 0 },
+        { q: 'With the internal renderer, where does the 7.1.4 aux go?', a: ['To an output', 'To a bus', 'To the bed (main) of the Dolby renderer'], ok: 2, at: 52 },
+        { q: 'In the I/O, Dolby Atmos tab, the headphone render must be…', a: ['2.0', 'Binaural', 'Off'], ok: 1, at: 96 },
+        { q: 'Binaural rendering needs a buffer of at least…', a: ['64 samples', 'About 512 samples', '4096 samples'], ok: 1, at: 120 },
+        { q: 'Once that is set, what else do you switch?', a: ['Nothing', 'In the Dolby Atmos Renderer window, set monitoring to binaural', 'The sample rate'], ok: 1, at: 137 },
+      ] }] },
   // ---------------- Module 6: the Zen Master (unlocks when every exercise before it is done) ----------------
   { id: 'rec-24-final', title: 'The final test', videos: [], requires: 'all',
     about: 'Ten hard questions on the whole session, from the tie box to the shutdown. Get 9 of 10 right to pass, and Maestro Zen will receive you.',
